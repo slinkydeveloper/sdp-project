@@ -76,6 +76,9 @@ fabric.properties
 # Compiled class file
 *.class
 
+# Target dir
+**/target
+
 # Log file
 *.log
 
