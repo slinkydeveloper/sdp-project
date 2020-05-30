@@ -1,15 +1,39 @@
 package com.slinkydeveloper.sdp.node.acquisition;
 
+import com.slinkydeveloper.sdp.node.simulator.Measurement;
 import com.slinkydeveloper.sdp.node.simulator.PM10Simulator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OverlappingSlidingWindowBufferTest {
+
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    @Test
+    void testCorrectAveraging() throws InterruptedException {
+        OverlappingSlidingWindowBuffer<Double> buffer = new OverlappingSlidingWindowBuffer<>(
+                10,
+                0.5,
+                OverlappingSlidingWindowBuffer.AVERAGE_REDUCER
+        );
+
+        for (int i = 0; i < 10; i++) {
+            buffer.addMeasurement(new Measurement(i + "", "aaa", 10, System.currentTimeMillis()));
+        }
+
+        assertThat(buffer.pollReducedMeasurement())
+                .hasValue(10d);
+
+        for (int i = 0; i < 5; i++) {
+            buffer.addMeasurement(new Measurement(i + "", "aaa", 6, System.currentTimeMillis()));
+        }
+
+        assertThat(buffer.pollReducedMeasurement())
+                .hasValue(8d);
+    }
 
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     @Test

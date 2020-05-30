@@ -27,7 +27,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
             measurementStream
                     .collect(Collectors.averagingDouble(Measurement::getValue));
 
-    // SPSC bounded Ring buffer implementation for measurements
+    // Bounded Ring buffer implementation for measurements
     private final Measurement[] measurements;
     private int measurementsWriteIndex;
     private int written;
