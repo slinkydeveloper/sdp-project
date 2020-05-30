@@ -1,4 +1,4 @@
-package com.slinkydeveloper.node.simulator;
+package com.slinkydeveloper.sdp.node.simulator;
 
 import java.util.Calendar;
 import java.util.Random;

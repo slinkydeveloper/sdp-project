@@ -9,7 +9,18 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>node-interface</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+        </dependency>
+    </dependencies>
+
+    <artifactId>sdp-node-interface</artifactId>
 
     <build>
         <plugins>
@@ -27,7 +38,15 @@
                         <configuration>
                             <includeStdTypes>true</includeStdTypes>
                             <cleanOutputFolder>true</cleanOutputFolder>
-                            <outputDirectory>${basedir}/target/generated-sources/protoc-jar</outputDirectory>
+                            <outputTargets>
+                                <outputTarget>
+                                    <type>java</type>
+                                </outputTarget>
+                                <outputTarget>
+                                    <type>grpc-java</type>
+                                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}</pluginArtifact>
+                                </outputTarget>
+                            </outputTargets>
                         </configuration>
                     </execution>
                 </executions>

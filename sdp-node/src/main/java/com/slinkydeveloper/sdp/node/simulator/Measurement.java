@@ -1,4 +1,4 @@
-package com.slinkydeveloper.node.simulator;
+package com.slinkydeveloper.sdp.node.simulator;
 
 public class Measurement implements Comparable<Measurement> {
 

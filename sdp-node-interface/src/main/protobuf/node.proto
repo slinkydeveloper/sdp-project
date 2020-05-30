@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package com.slinkydeveloper.sdp.node;
+
+import "google/protobuf/empty.proto";
+option java_package = "com.slinkydeveloper.sdp.node";
+option java_multiple_files = true;
+
+message Token {
+  map<int32, double> lastMeasurements = 1;
+}
+
+service Node {
+  rpc PassToken(Token) returns (google.protobuf.Empty) {}
+}

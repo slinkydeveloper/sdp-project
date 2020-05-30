@@ -1,4 +1,4 @@
-package com.slinkydeveloper.node.simulator;
+package com.slinkydeveloper.sdp.node.simulator;
 
 public interface Buffer {
 
