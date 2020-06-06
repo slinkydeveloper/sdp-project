@@ -7,7 +7,6 @@ public abstract class Simulator extends Thread {
 
     protected volatile boolean stopCondition = false;
     protected Random rnd = new Random();
-    private long midnight;
     private Buffer buffer;
     private String id;
     private String type;
@@ -17,7 +16,6 @@ public abstract class Simulator extends Thread {
         this.id = id;
         this.type = type;
         this.buffer = buffer;
-        this.midnight = computeMidnightMilliseconds();
     }
 
     public void stopMeGently() {
@@ -25,7 +23,7 @@ public abstract class Simulator extends Thread {
     }
 
     protected void addMeasurement(double measurement){
-        buffer.addMeasurement(new Measurement(id, type, measurement, deltaTime()));
+        buffer.addMeasurement(new Measurement(id, type, measurement, currentTime()));
     }
 
     public Buffer getBuffer(){
@@ -42,17 +40,8 @@ public abstract class Simulator extends Thread {
 
     public abstract void run();
 
-    private long computeMidnightMilliseconds(){
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
-    }
-
-    private long deltaTime(){
-        return System.currentTimeMillis()-midnight;
+    private long currentTime(){
+        return System.currentTimeMillis();
     }
 
     public String getIdentifier(){
