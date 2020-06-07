@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 /**
  * This class is a Buffer implementation that reduces the
  * values in the buffer following an overlapping sliding window.
- *
+ * <p>
  * Thread safety: Only one thread can add measurements, but more threads can concurrently access
  * to the available reduced values
  *

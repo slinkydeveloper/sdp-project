@@ -9,11 +9,12 @@ public class LoggerConfig {
 
     private static volatile ConsoleHandler instance = null;
 
-    private LoggerConfig() {}
+    private LoggerConfig() {
+    }
 
     public static ConsoleHandler getConsoleHandlerInstance() {
         if (instance == null) {
-            synchronized(LoggerConfig.class) {
+            synchronized (LoggerConfig.class) {
                 if (instance == null) {
                     instance = new ConsoleHandler();
                     instance.setLevel(

@@ -10,8 +10,8 @@ public class Measurement implements Comparable<Measurement> {
     public Measurement(String id, String type, double value, long timestamp) {
         this.value = value;
         this.timestamp = timestamp;
-        this.id=id;
-        this.type=type;
+        this.id = id;
+        this.type = type;
     }
 
     public double getValue() {
@@ -53,7 +53,7 @@ public class Measurement implements Comparable<Measurement> {
         return thisTimestamp.compareTo(otherTimestamp);
     }
 
-    public String toString(){
+    public String toString() {
         return value + " " + timestamp;
     }
 }

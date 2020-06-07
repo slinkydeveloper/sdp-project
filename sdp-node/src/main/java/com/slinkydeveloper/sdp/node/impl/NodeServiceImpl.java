@@ -96,6 +96,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
             this.openClients = newOpenClients;
             this.nextNeighbours = Utils.generateNextNeighboursList(knownHosts.keySet(), this.myId);
+
+            LOG.fine("New next neighbours: " + this.nextNeighbours);
         }
         synchronized (discoverStateMachineLock) {
             this.discoveryStateMachine = null;
