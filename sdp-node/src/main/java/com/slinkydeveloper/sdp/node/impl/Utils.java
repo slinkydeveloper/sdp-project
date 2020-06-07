@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 public class Utils {
 
     static NodeGrpc.NodeBlockingStub buildNewClient(String address) {
-        return NodeGrpc.newBlockingStub(ManagedChannelBuilder.forTarget(address).build());
+        return NodeGrpc.newBlockingStub(ManagedChannelBuilder.forTarget(address).usePlaintext().build());
     }
 
     static List<Integer> generateNextNeighboursList(Set<Integer> neighbours, int myId) {

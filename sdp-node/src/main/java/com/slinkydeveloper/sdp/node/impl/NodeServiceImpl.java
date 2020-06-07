@@ -1,6 +1,7 @@
 package com.slinkydeveloper.sdp.node.impl;
 
 import com.google.protobuf.Empty;
+import com.slinkydeveloper.sdp.concurrent.AtomicFlag;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.*;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
@@ -20,6 +21,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final Object sensorReadingsTokenLock = new Object();
     private SensorsReadingsToken sensorReadingsToken;
+    private AtomicFlag hasSensorReadingsToken;
 
     private final Object clientsLock = new Object();
     private Map<Integer, NodeGrpc.NodeBlockingStub> openClients;
@@ -34,11 +36,14 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.slidingWindowBuffer = slidingWindowBuffer;
 
         this.endDiscoveryCallback(initialKnownHosts);
+        this.hasSensorReadingsToken = new AtomicFlag("TokenInThisNode", false);
     }
 
     @Override
     public void passSensorsReadingsToken(final SensorsReadingsToken request, StreamObserver<Empty> responseObserver) {
         LOG.info("Received sensor readings token: " + request);
+
+        this.hasSensorReadingsToken.setTrue();
 
         // If we're discovering nodes, then keep the token on hold
         if (Utils.atomicExecuteOnPredicateSuccess(
@@ -68,6 +73,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             LOG.info("Token already contains data from myself");
         }
 
+        reply(responseObserver);
+
         if (token.getLastMeasurementsMap().keySet().equals(this.getKnownNodes())) {
             LOG.info("We have data from everybody, I'm going to send values to the gateway");
             // TODO send data to gateway
@@ -76,8 +83,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         } else {
             forwardSensorReadingsToken(token);
         }
-
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -94,33 +99,82 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
 
         // Reply to the client
-        responseObserver.onCompleted();
+        reply(responseObserver);
 
-        // Forward to next neighbour and just skip failing ones
-        int i = 0;
-        NodeGrpc.NodeBlockingStub nextNeighbour = getNextNeighbour(0);
-        while (nextNeighbour != null) {
-            try {
-                nextNeighbour.passDiscoveryToken(token);
-                LOG.info("Discovery token passed successfully to neighbour " + i + ": " + token);
-                return;
-            } catch (Exception e) {
-                LOG.warning("Skipping neighbour with index " + i + " because something wrong happened while passing the token: " + e);
-                i++;
-                nextNeighbour = getNextNeighbour(i);
-            }
+        if (token != null) {
+            forwardDiscoveryToken(token);
         }
-
     }
 
     @Override
     public void notifyNewNeighbour(NewNeighbour request, StreamObserver<Empty> responseObserver) {
-        responseObserver.onError(new IllegalStateException("Method notifyNewNeighbour not implemented"));
+        LOG.info("I have a new neighbour as next node: " + request);
+        DiscoveryToken token = null;
+        synchronized (discoveryStateMachineLock) {
+            synchronized (clientsLock) {
+                this.openClients.put(
+                        request.getId(),
+                        Utils.buildNewClient(request.getAddress())
+                );
+
+                this.nextNeighbours.add(0, request.getId());
+            }
+
+            // Generate starting token if a discovery is not available
+            //TODO what happens if we're already running the service discovery?
+            if (discoveryStateMachine == null || !discoveryStateMachine.isDiscovering()) {
+                discoveryStateMachine = new DiscoveryStateMachine(this.myId, this.myAddress, this::endDiscoveryCallback);
+                token = discoveryStateMachine.startDiscovery();
+            }
+        }
+
+        reply(responseObserver);
+
+        if (token != null) {
+            forwardDiscoveryToken(token);
+        }
     }
 
     @Override
     public void doYouHaveTheToken(SearchToken request, StreamObserver<Empty> responseObserver) {
         responseObserver.onError(new IllegalStateException("Method doYouHaveTheToken not implemented"));
+    }
+
+    /**
+     * After the service is started, we notify to the previous node my presence so it can start a new discovery
+     * Then we start sending the token
+     */
+    public void start() {
+        NodeGrpc.NodeBlockingStub previous = this.getPreviousNeighbour();
+        if (previous != null) {
+            LOG.info("Notifying my presence to the previous node in the ring");
+            //TODO What if this node is not reachable?
+            previous.notifyNewNeighbour(
+                    NewNeighbour
+                            .newBuilder()
+                            .setId(this.myId)
+                            .setAddress(this.myAddress)
+                            .build()
+            );
+        } else {
+            LOG.info("I'm alone in the network");
+        }
+    }
+
+    /**
+     * Start a new discovery (this operation is performed when the server is started)
+     */
+    private void startDiscoveryAfterFailure() {
+        // Generate starting token
+        DiscoveryToken token = null;
+        synchronized (discoveryStateMachineLock) {
+            if (discoveryStateMachine == null) {
+                discoveryStateMachine = new DiscoveryStateMachine(this.myId, this.myAddress, this::endDiscoveryCallback);
+            }
+            token = discoveryStateMachine.startDiscovery();
+        }
+
+        forwardDiscoveryToken(token);
     }
 
     private void endDiscoveryCallback(Map<Integer, String> knownHosts) {
@@ -147,7 +201,15 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         synchronized (discoveryStateMachineLock) {
             this.discoveryStateMachine = null;
         }
-        //TODO forward token on hold if any
+
+        // If there is a sensor readings token on hold, then forward it
+        SensorsReadingsToken token;
+        synchronized (sensorReadingsTokenLock) {
+            token = this.sensorReadingsToken;
+            this.sensorReadingsToken = null;
+        }
+
+        if (token != null) forwardSensorReadingsToken(token);
     }
 
     private NodeGrpc.NodeBlockingStub getNextNeighbour(int index) {
@@ -156,6 +218,15 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 return null;
             }
             return this.openClients.get(this.nextNeighbours.get(index));
+        }
+    }
+
+    private NodeGrpc.NodeBlockingStub getPreviousNeighbour() {
+        synchronized (clientsLock) {
+            if (this.openClients.isEmpty()) {
+                return null;
+            }
+            return this.openClients.get(this.nextNeighbours.get(this.nextNeighbours.size() - 1));
         }
     }
 
@@ -171,6 +242,30 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private void forwardSensorReadingsToken(SensorsReadingsToken token) {
 
+        this.hasSensorReadingsToken.setFalse();
+    }
+
+    private void forwardDiscoveryToken(DiscoveryToken token) {
+        // Forward to next neighbour and just skip failing ones
+        int i = 0;
+        NodeGrpc.NodeBlockingStub nextNeighbour = getNextNeighbour(0);
+        while (nextNeighbour != null) {
+            try {
+                nextNeighbour.passDiscoveryToken(token);
+                LOG.info("Discovery token passed successfully to neighbour " + i + ": " + token);
+                return;
+            } catch (Exception e) {
+                LOG.warning("Skipping neighbour with index " + i + " because something wrong happened while passing the token: " + e);
+                i++;
+                nextNeighbour = getNextNeighbour(i);
+            }
+        }
+        throw new IllegalStateException("All the neighbours are unavailable!");
+    }
+
+    private void reply(StreamObserver<Empty> emptyStream) {
+        emptyStream.onNext(Empty.newBuilder().build());
+        emptyStream.onCompleted();
     }
 
 }

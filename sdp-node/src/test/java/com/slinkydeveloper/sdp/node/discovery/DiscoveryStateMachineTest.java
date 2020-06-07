@@ -32,7 +32,7 @@ class DiscoveryStateMachineTest {
                 new DiscoveryStateMachine(4, "localhost:8083", assertCorrectDiscovery)
         );
 
-        DiscoveryToken token = nodes.get(startingNode).generateStartToken();
+        DiscoveryToken token = nodes.get(startingNode).startDiscovery();
         assertThat(token)
                 .isNotNull();
 

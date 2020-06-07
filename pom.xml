@@ -22,18 +22,10 @@
         <dependencies>
             <dependency>
                 <groupId>io.grpc</groupId>
-                <artifactId>grpc-protobuf</artifactId>
-                <version>1.29.0</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-stub</artifactId>
-                <version>1.29.0</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-netty-shaded</artifactId>
-                <version>1.29.0</version>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <!-- Test deps -->

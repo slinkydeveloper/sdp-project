@@ -17,15 +17,16 @@ public class NodeServiceServer {
 
     private final int port;
     private final Server server;
+    private final NodeServiceImpl service;
 
     public NodeServiceServer(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> measurementsBuffer) {
         this.port = Integer.parseInt(myAddress.split(Pattern.quote(":"))[1]);
+        this.service = new NodeServiceImpl(myId, myAddress, initialKnownHosts, measurementsBuffer);
 
         this.server = ServerBuilder
                 .forPort(this.port)
-                .addService(new NodeServiceImpl(myId, myAddress, initialKnownHosts, measurementsBuffer))
+                .addService(this.service)
                 .build();
-
     }
 
     /**
@@ -44,6 +45,9 @@ public class NodeServiceServer {
             }
             System.err.println("*** server shut down");
         }));
+
+        // When we join, we greet the previous node
+        this.service.start();
     }
 
     /**

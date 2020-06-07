@@ -32,8 +32,9 @@ public class DiscoveryStateMachine {
     /**
      * Generate the token to start the discovery from this node
      */
-    public DiscoveryToken generateStartToken() {
-        LOG.fine("Generating starting token");
+    public DiscoveryToken startDiscovery() {
+        LOG.fine("Generating start discovery token");
+        this.partecipating = true;
         return DiscoveryToken.newBuilder()
                 .setType(DiscoveryTokenType.DISCOVERY)
                 .setLeader(this.myId)
