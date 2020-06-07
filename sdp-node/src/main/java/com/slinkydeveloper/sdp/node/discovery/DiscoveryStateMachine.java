@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+/**
+ * This class is not thread safe
+ */
 public class DiscoveryStateMachine {
 
     private final static Logger LOG = LoggerConfig.getLogger(DiscoveryStateMachine.class);
