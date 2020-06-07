@@ -34,7 +34,6 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
     private final int overlapNumber;
 
     // Measurements enqueued
-    private final Object reducedMeasurementsLock = new Object();
     private final Queue<T> reducedMeasurements;
     private final Function<Stream<Measurement>, T> reducer;
 
@@ -54,7 +53,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
      * @return true if there are any reduced measurements
      */
     public boolean hasReducedMeasurements() {
-        synchronized (reducedMeasurementsLock) {
+        synchronized (reducedMeasurements) {
             return !reducedMeasurements.isEmpty();
         }
     }
@@ -65,7 +64,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
      * @return Empty if there isn't any reduced measurement, otherwise returns the head of the queue
      */
     public Optional<T> pollReducedMeasurement() {
-        synchronized (reducedMeasurementsLock) {
+        synchronized (reducedMeasurements) {
             return Optional.ofNullable(reducedMeasurements.poll());
         }
     }
@@ -89,7 +88,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
     private void generateNewReducedMeasurement() {
         T reduced = this.reducer.apply(Arrays.stream(this.measurements));
         LOG.fine("New reduced value " + reduced.toString());
-        synchronized (reducedMeasurementsLock) {
+        synchronized (reducedMeasurements) {
             this.reducedMeasurements.add(reduced);
         }
     }
