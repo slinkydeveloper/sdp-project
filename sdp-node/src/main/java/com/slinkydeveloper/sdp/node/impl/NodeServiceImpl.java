@@ -3,6 +3,7 @@ package com.slinkydeveloper.sdp.node.impl;
 import com.google.protobuf.Empty;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.*;
+import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.discovery.DiscoveryStateMachine;
 import io.grpc.stub.StreamObserver;
 
@@ -15,24 +16,68 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final int myId;
     private final String myAddress;
+    private final OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer;
+
+    private final Object sensorReadingsTokenLock = new Object();
+    private SensorsReadingsToken sensorReadingsToken;
 
     private final Object clientsLock = new Object();
     private Map<Integer, NodeGrpc.NodeBlockingStub> openClients;
     private List<Integer> nextNeighbours;
 
-    private final Object discoverStateMachineLock = new Object();
+    private final Object discoveryStateMachineLock = new Object();
     private DiscoveryStateMachine discoveryStateMachine;
 
-    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts) {
+    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer) {
         this.myId = myId;
         this.myAddress = myAddress;
+        this.slidingWindowBuffer = slidingWindowBuffer;
 
         this.endDiscoveryCallback(initialKnownHosts);
     }
 
     @Override
-    public void passSensorsReadingsToken(SensorsReadingsToken request, StreamObserver<Empty> responseObserver) {
-        responseObserver.onError(new IllegalStateException("Method passSensorsReadingsToken not implemented"));
+    public void passSensorsReadingsToken(final SensorsReadingsToken request, StreamObserver<Empty> responseObserver) {
+        LOG.info("Received sensor readings token: " + request);
+
+        // If we're discovering nodes, then keep the token on hold
+        if (Utils.atomicExecuteOnPredicateSuccess(
+                discoveryStateMachineLock,
+                () -> this.discoveryStateMachine != null && this.discoveryStateMachine.isDiscovering(),
+                () -> {
+                    synchronized (sensorReadingsTokenLock) {
+                        this.sensorReadingsToken = request;
+                    }
+                }
+        )) {
+            LOG.info("We're discovering, the token is on hold");
+            responseObserver.onCompleted();
+            return;
+        }
+
+        // Generate the new token to forward
+        SensorsReadingsToken token = request;
+
+        if (!request.containsLastMeasurements(this.myId)) {
+            LOG.info("Token does not contain data from myself");
+            Optional<Double> newAverage = slidingWindowBuffer.pollReducedMeasurement();
+            if (newAverage.isPresent()) {
+                token = token.toBuilder().putLastMeasurements(this.myId, newAverage.get()).build();
+            }
+        } else {
+            LOG.info("Token already contains data from myself");
+        }
+
+        if (token.getLastMeasurementsMap().keySet().equals(this.getKnownNodes())) {
+            LOG.info("We have data from everybody, I'm going to send values to the gateway");
+            // TODO send data to gateway
+
+            forwardSensorReadingsToken(SensorsReadingsToken.newBuilder().build());
+        } else {
+            forwardSensorReadingsToken(token);
+        }
+
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -41,7 +86,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         // Generate the new token to forward
         DiscoveryToken token = null;
-        synchronized (discoverStateMachineLock) {
+        synchronized (discoveryStateMachineLock) {
             if (discoveryStateMachine == null) {
                 discoveryStateMachine = new DiscoveryStateMachine(this.myId, this.myAddress, this::endDiscoveryCallback);
             }
@@ -99,9 +144,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
             LOG.fine("New next neighbours: " + this.nextNeighbours);
         }
-        synchronized (discoverStateMachineLock) {
+        synchronized (discoveryStateMachineLock) {
             this.discoveryStateMachine = null;
         }
+        //TODO forward token on hold if any
     }
 
     private NodeGrpc.NodeBlockingStub getNextNeighbour(int index) {
@@ -111,6 +157,20 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             }
             return this.openClients.get(this.nextNeighbours.get(index));
         }
+    }
+
+    private Set<Integer> getKnownNodes() {
+        Set<Integer> res = null;
+        synchronized (clientsLock) {
+            res = this.openClients.keySet();
+        }
+        res = new HashSet<>(res);
+        res.add(this.myId);
+        return res;
+    }
+
+    private void forwardSensorReadingsToken(SensorsReadingsToken token) {
+
     }
 
 }

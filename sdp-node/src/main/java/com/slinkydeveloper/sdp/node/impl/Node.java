@@ -1,5 +1,7 @@
 package com.slinkydeveloper.sdp.node.impl;
 
+import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,15 +14,22 @@ public class Node {
         String myAddress = args[1];
 
         Map<Integer, String> initialKnownHosts = new HashMap<>();
-        for (String entry : args[2].split(Pattern.quote(","))) {
-            String[] splitted = entry.split(Pattern.quote("="));
-            initialKnownHosts.put(
-                    Integer.parseInt(splitted[0]),
-                    splitted[1]
-            );
+        if (args.length == 3) {
+            for (String entry : args[2].split(Pattern.quote(","))) {
+                String[] splitted = entry.split(Pattern.quote("="));
+                initialKnownHosts.put(
+                        Integer.parseInt(splitted[0]),
+                        splitted[1]
+                );
+            }
         }
 
-        NodeServiceServer serviceServer = new NodeServiceServer(myId, myAddress, initialKnownHosts);
+        NodeServiceServer serviceServer = new NodeServiceServer(
+                myId,
+                myAddress,
+                initialKnownHosts,
+                new OverlappingSlidingWindowBuffer<>(10, 0.5, OverlappingSlidingWindowBuffer.AVERAGE_REDUCER)
+        );
         serviceServer.start();
         serviceServer.blockUntilShutdown();
     }

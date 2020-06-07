@@ -1,6 +1,7 @@
 package com.slinkydeveloper.sdp.node.impl;
 
 import com.slinkydeveloper.sdp.log.LoggerConfig;
+import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
@@ -17,12 +18,12 @@ public class NodeServiceServer {
     private final int port;
     private final Server server;
 
-    public NodeServiceServer(int myId, String myAddress, Map<Integer, String> initialKnownHosts) {
+    public NodeServiceServer(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> measurementsBuffer) {
         this.port = Integer.parseInt(myAddress.split(Pattern.quote(":"))[1]);
 
         this.server = ServerBuilder
                 .forPort(this.port)
-                .addService(new NodeServiceImpl(myId, myAddress, initialKnownHosts))
+                .addService(new NodeServiceImpl(myId, myAddress, initialKnownHosts, measurementsBuffer))
                 .build();
 
     }
