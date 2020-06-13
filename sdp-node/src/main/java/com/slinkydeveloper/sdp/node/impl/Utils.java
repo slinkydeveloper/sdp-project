@@ -25,10 +25,10 @@ public class Utils {
 
         int myIndex = nextNeighbours.indexOf(myId);
 
-        nextNeighbours.remove(Integer.valueOf(myId));
-        Collections.rotate(nextNeighbours, myIndex);
+        Collections.rotate(nextNeighbours, nextNeighbours.size() - myIndex);
+        nextNeighbours.remove(0);
 
-        return nextNeighbours;
+        return Collections.unmodifiableList(nextNeighbours);
     }
 
     static boolean atomicExecuteOnPredicate(Object lock, Supplier<Boolean> predicate, Consumer<Boolean> executeInLockedSection) {

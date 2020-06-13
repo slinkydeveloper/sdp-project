@@ -30,6 +30,7 @@ public class LoggerConfig {
 
     public static Logger getLogger(Class<?> clazz) {
         Logger logger = Logger.getLogger(clazz.getName());
+        logger.setUseParentHandlers(false);
         logger.addHandler(getConsoleHandlerInstance());
         logger.setLevel(
                 Level.parse(

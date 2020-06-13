@@ -108,7 +108,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     @Override
     public void notifyNewNeighbour(NewNeighbour request, StreamObserver<Empty> responseObserver) {
-        LOG.info("I have a new neighbour as next node: " + request);
+        LOG.info("I have a new neighbour: " + request);
         DiscoveryToken token = null;
         synchronized (discoveryStateMachineLock) {
             synchronized (clientsLock) {
@@ -117,15 +117,19 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                         Utils.buildNewClient(request.getAddress())
                 );
 
-                this.nextNeighbours.add(0, request.getId());
+                // If for some reason the next neighbour is wrong, we need to reorganize the list
+                Set<Integer> newNeighbours = new HashSet<>(this.nextNeighbours);
+                newNeighbours.add(request.getId());
+                this.nextNeighbours = Utils.generateNextNeighboursList(newNeighbours, this.myId);
+                LOG.fine("Temporary new nextNeighbours: " + this.nextNeighbours);
             }
 
             // Generate starting token if a discovery is not available
             //TODO what happens if we're already running the service discovery?
-            if (discoveryStateMachine == null || !discoveryStateMachine.isDiscovering()) {
+            if (discoveryStateMachine == null) {
                 discoveryStateMachine = new DiscoveryStateMachine(this.myId, this.myAddress, this::endDiscoveryCallback);
-                token = discoveryStateMachine.startDiscovery();
             }
+            token = discoveryStateMachine.startDiscovery();
         }
 
         reply(responseObserver);
@@ -252,7 +256,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         while (nextNeighbour != null) {
             try {
                 nextNeighbour.passDiscoveryToken(token);
-                LOG.info("Discovery token passed successfully to neighbour " + i + ": " + token);
+                LOG.info("Discovery token passed successfully to " + (i + 1) + "° neighbour: " + token);
                 return;
             } catch (Exception e) {
                 LOG.warning("Skipping neighbour with index " + i + " because something wrong happened while passing the token: " + e);

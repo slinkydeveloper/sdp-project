@@ -59,4 +59,16 @@ class UtilsTest {
         assertThat(Utils.generateNextNeighboursList(input, 3))
                 .isEqualTo(output);
     }
+
+    @Test
+    void generateNextNeighboursShuffled() {
+        Set<Integer> input = new HashSet<>(Arrays.asList(
+            2, 4, 1
+        ));
+
+        List<Integer> output = Arrays.asList(4, 1, 2);
+
+        assertThat(Utils.generateNextNeighboursList(input, 3))
+            .isEqualTo(output);
+    }
 }
