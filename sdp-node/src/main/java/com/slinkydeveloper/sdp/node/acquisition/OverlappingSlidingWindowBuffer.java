@@ -24,8 +24,8 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
     private final static Logger LOG = LoggerConfig.getLogger(OverlappingSlidingWindowBuffer.class);
 
     public static final Function<Stream<Measurement>, Double> AVERAGE_REDUCER = measurementStream ->
-            measurementStream
-                    .collect(Collectors.averagingDouble(Measurement::getValue));
+        measurementStream
+            .collect(Collectors.averagingDouble(Measurement::getValue));
 
     // Bounded Ring buffer implementation for measurements
     private final Measurement[] measurements;
@@ -79,7 +79,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
         this.measurements[this.measurementsWriteIndex] = m;
         this.measurementsWriteIndex = (this.measurementsWriteIndex + 1) % this.measurements.length;
         this.written++;
-        LOG.fine("Measurement: " + m.getValue() + ", timestamp: " + m.getTimestamp() + ", written: " + this.written);
+        //LOG.fine("Measurement: " + m.getValue() + ", timestamp: " + m.getTimestamp() + ", written: " + this.written);
         if (this.written >= this.measurements.length && (this.written % this.overlapNumber == 0)) {
             generateNewReducedMeasurement();
         }

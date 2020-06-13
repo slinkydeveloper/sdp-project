@@ -24,9 +24,9 @@ public class NodeServiceServer {
         this.service = new NodeServiceImpl(myId, myAddress, initialKnownHosts, measurementsBuffer);
 
         this.server = ServerBuilder
-                .forPort(this.port)
-                .addService(this.service)
-                .build();
+            .forPort(this.port)
+            .addService(this.service)
+            .build();
     }
 
     /**

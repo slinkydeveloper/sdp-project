@@ -13,7 +13,12 @@ import java.util.function.Supplier;
 public class Utils {
 
     static NodeGrpc.NodeBlockingStub buildNewClient(String address) {
-        return NodeGrpc.newBlockingStub(ManagedChannelBuilder.forTarget(address).usePlaintext().build());
+        return NodeGrpc.newBlockingStub(
+            ManagedChannelBuilder
+                .forTarget(address)
+                .usePlaintext()
+                .build()
+        );
     }
 
     static List<Integer> generateNextNeighboursList(Set<Integer> neighbours, int myId) {
@@ -45,6 +50,11 @@ public class Utils {
             if (res) {
                 executeInLockedSection.run();
             }
+        });
+    }
+
+    static boolean atomicCheckPredicate(Object lock, Supplier<Boolean> predicate) {
+        return atomicExecuteOnPredicate(lock, predicate, (v) -> {
         });
     }
 }

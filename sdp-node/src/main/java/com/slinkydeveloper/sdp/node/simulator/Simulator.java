@@ -1,6 +1,5 @@
 package com.slinkydeveloper.sdp.node.simulator;
 
-import java.util.Calendar;
 import java.util.Random;
 
 public abstract class Simulator extends Thread {

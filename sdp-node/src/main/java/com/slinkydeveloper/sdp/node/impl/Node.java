@@ -1,6 +1,7 @@
 package com.slinkydeveloper.sdp.node.impl;
 
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
+import com.slinkydeveloper.sdp.node.simulator.PM10Simulator;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -18,17 +19,22 @@ public class Node {
             for (String entry : args[2].split(Pattern.quote(","))) {
                 String[] splitted = entry.split(Pattern.quote("="));
                 initialKnownHosts.put(
-                        Integer.parseInt(splitted[0]),
-                        splitted[1]
+                    Integer.parseInt(splitted[0]),
+                    splitted[1]
                 );
             }
         }
 
+        // Start the measurements simulator
+        OverlappingSlidingWindowBuffer<Double> buffer = new OverlappingSlidingWindowBuffer<>(10, 0.5, OverlappingSlidingWindowBuffer.AVERAGE_REDUCER);
+        PM10Simulator simulator = new PM10Simulator(buffer);
+        simulator.start();
+
         NodeServiceServer serviceServer = new NodeServiceServer(
-                myId,
-                myAddress,
-                initialKnownHosts,
-                new OverlappingSlidingWindowBuffer<>(10, 0.5, OverlappingSlidingWindowBuffer.AVERAGE_REDUCER)
+            myId,
+            myAddress,
+            initialKnownHosts,
+            buffer
         );
         serviceServer.start();
         serviceServer.blockUntilShutdown();

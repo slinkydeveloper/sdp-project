@@ -36,10 +36,10 @@ public class DiscoveryStateMachine {
         LOG.fine("Generating start discovery token");
         this.partecipating = true;
         return DiscoveryToken.newBuilder()
-                .setType(DiscoveryTokenType.DISCOVERY)
-                .setLeader(this.myId)
-                .putKnownHosts(this.myId, this.myAddress)
-                .build();
+            .setType(DiscoveryTokenType.DISCOVERY)
+            .setLeader(this.myId)
+            .putKnownHosts(this.myId, this.myAddress)
+            .build();
     }
 
     /**
@@ -55,8 +55,8 @@ public class DiscoveryStateMachine {
         if (token.getType() == DiscoveryTokenType.DISCOVERY) {
             // Add myself in the new token
             DiscoveryToken.Builder newTokenBuilder = token
-                    .toBuilder()
-                    .putKnownHosts(this.myId, this.myAddress);
+                .toBuilder()
+                .putKnownHosts(this.myId, this.myAddress);
 
             if (token.getLeader() > this.myId) {
                 this.partecipating = true;
@@ -76,8 +76,8 @@ public class DiscoveryStateMachine {
                 // Notify the new known hosts
                 this.endDiscoveryCallback.accept(token.getKnownHostsMap());
                 return newTokenBuilder
-                        .setType(DiscoveryTokenType.DISCOVERED)
-                        .build();
+                    .setType(DiscoveryTokenType.DISCOVERED)
+                    .build();
             }
         } else {
             if (token.getLeader() == this.myId) {

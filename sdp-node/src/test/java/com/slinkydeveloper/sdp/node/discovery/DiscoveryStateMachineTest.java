@@ -18,23 +18,23 @@ class DiscoveryStateMachineTest {
     @ValueSource(ints = {0, 1, 2, 3})
     public void fourNodesDiscovery(int startingNode) {
         Consumer<Map<Integer, String>> assertCorrectDiscovery = m -> assertThat(m)
-                .containsOnly(
-                        new AbstractMap.SimpleImmutableEntry<>(1, "localhost:8080"),
-                        new AbstractMap.SimpleImmutableEntry<>(2, "localhost:8081"),
-                        new AbstractMap.SimpleImmutableEntry<>(3, "localhost:8082"),
-                        new AbstractMap.SimpleImmutableEntry<>(4, "localhost:8083")
-                );
+            .containsOnly(
+                new AbstractMap.SimpleImmutableEntry<>(1, "localhost:8080"),
+                new AbstractMap.SimpleImmutableEntry<>(2, "localhost:8081"),
+                new AbstractMap.SimpleImmutableEntry<>(3, "localhost:8082"),
+                new AbstractMap.SimpleImmutableEntry<>(4, "localhost:8083")
+            );
 
         List<DiscoveryStateMachine> nodes = Arrays.asList(
-                new DiscoveryStateMachine(1, "localhost:8080", assertCorrectDiscovery),
-                new DiscoveryStateMachine(2, "localhost:8081", assertCorrectDiscovery),
-                new DiscoveryStateMachine(3, "localhost:8082", assertCorrectDiscovery),
-                new DiscoveryStateMachine(4, "localhost:8083", assertCorrectDiscovery)
+            new DiscoveryStateMachine(1, "localhost:8080", assertCorrectDiscovery),
+            new DiscoveryStateMachine(2, "localhost:8081", assertCorrectDiscovery),
+            new DiscoveryStateMachine(3, "localhost:8082", assertCorrectDiscovery),
+            new DiscoveryStateMachine(4, "localhost:8083", assertCorrectDiscovery)
         );
 
         DiscoveryToken token = nodes.get(startingNode).startDiscovery();
         assertThat(token)
-                .isNotNull();
+            .isNotNull();
 
         int i = (startingNode + 1) % 4;
         while (token != null) {

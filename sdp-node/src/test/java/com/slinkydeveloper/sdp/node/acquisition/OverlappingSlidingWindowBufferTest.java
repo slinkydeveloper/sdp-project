@@ -15,9 +15,9 @@ class OverlappingSlidingWindowBufferTest {
     @Test
     void testCorrectAveraging() throws InterruptedException {
         OverlappingSlidingWindowBuffer<Double> buffer = new OverlappingSlidingWindowBuffer<>(
-                10,
-                0.5,
-                OverlappingSlidingWindowBuffer.AVERAGE_REDUCER
+            10,
+            0.5,
+            OverlappingSlidingWindowBuffer.AVERAGE_REDUCER
         );
 
         for (int i = 0; i < 10; i++) {
@@ -25,23 +25,23 @@ class OverlappingSlidingWindowBufferTest {
         }
 
         assertThat(buffer.pollReducedMeasurement())
-                .hasValue(10d);
+            .hasValue(10d);
 
         for (int i = 0; i < 5; i++) {
             buffer.addMeasurement(new Measurement(i + "", "aaa", 6, System.currentTimeMillis()));
         }
 
         assertThat(buffer.pollReducedMeasurement())
-                .hasValue(8d);
+            .hasValue(8d);
     }
 
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     @Test
     void testIntegrationWithPM10Simulator() throws InterruptedException {
         OverlappingSlidingWindowBuffer<Double> buffer = new OverlappingSlidingWindowBuffer<>(
-                10,
-                0.5,
-                OverlappingSlidingWindowBuffer.AVERAGE_REDUCER
+            10,
+            0.5,
+            OverlappingSlidingWindowBuffer.AVERAGE_REDUCER
         );
         PM10Simulator simulator = new PM10Simulator(buffer);
 
@@ -54,7 +54,7 @@ class OverlappingSlidingWindowBufferTest {
             Thread.sleep(1000);
         }
         assertThat(buffer.pollReducedMeasurement())
-                .isNotEmpty();
+            .isNotEmpty();
 
         // Let's try again
         while (!buffer.hasReducedMeasurements()) {
@@ -62,7 +62,7 @@ class OverlappingSlidingWindowBufferTest {
             Thread.sleep(1000);
         }
         assertThat(buffer.pollReducedMeasurement())
-                .isNotEmpty();
+            .isNotEmpty();
     }
 
 }
