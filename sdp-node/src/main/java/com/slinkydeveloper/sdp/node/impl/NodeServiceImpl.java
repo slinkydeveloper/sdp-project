@@ -2,6 +2,7 @@ package com.slinkydeveloper.sdp.node.impl;
 
 import com.google.protobuf.Empty;
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
+import com.slinkydeveloper.sdp.concurrent.AtomicUtils;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.*;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
@@ -44,7 +45,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.info("Received sensor readings token:\n" + request);
 
         // If we're discovering nodes, then keep the token on hold
-        if (Utils.atomicCheckPredicate(discoveryStateMachineLock, this.discoveryStateMachine::isDiscovering)) {
+        if (AtomicUtils.atomicCheckPredicate(discoveryStateMachineLock, this.discoveryStateMachine::isDiscovering)) {
             LOG.info("We're discovering, the token is on hold");
             this.sensorReadingsToken.set(request);
             reply(responseObserver);
@@ -83,10 +84,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.info("Received discovery token:\n" + request);
 
         // Generate the new token to forward
-        DiscoveryToken token = null;
-        synchronized (discoveryStateMachineLock) {
-            token = discoveryStateMachine.onReceivedDiscovery(request);
-        }
+        DiscoveryToken token = AtomicUtils
+            .atomicGet(discoveryStateMachineLock, () -> this.discoveryStateMachine.onReceivedDiscovery(request));
 
         // Reply to the client
         reply(responseObserver);
@@ -160,10 +159,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.warning("Something went wrong, trying to execute discovery again");
 
         // Generate starting token
-        DiscoveryToken token = null;
-        synchronized (discoveryStateMachineLock) {
-            token = discoveryStateMachine.startDiscovery();
-        }
+        DiscoveryToken token = AtomicUtils
+            .atomicGet(discoveryStateMachineLock, this.discoveryStateMachine::startDiscovery);
 
         forwardDiscoveryToken(token);
     }
@@ -224,10 +221,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     }
 
     private Set<Integer> getKnownNodes() {
-        Set<Integer> res = null;
-        synchronized (clientsLock) {
-            res = this.openClients.keySet();
-        }
+        Set<Integer> res = AtomicUtils.atomicGet(clientsLock, this.openClients::keySet);
         res = new HashSet<>(res);
         res.add(this.myId);
         return res;
