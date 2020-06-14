@@ -13,6 +13,9 @@ import io.grpc.stub.StreamObserver;
 import java.util.*;
 import java.util.logging.Logger;
 
+import static com.slinkydeveloper.sdp.SetUtils.minus;
+import static com.slinkydeveloper.sdp.SetUtils.plus;
+
 public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final static Logger LOG = LoggerConfig.getLogger(NodeServiceImpl.class);
@@ -71,7 +74,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
         DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(
             request,
-            knownHosts.keySet().containsAll(request.getKnownHostsMap().keySet()),
+            !minus(
+                plus(knownHosts.keySet(), this.myId),
+                request.getKnownHostsMap().keySet()
+            ).isEmpty(),
             knownHosts
         );
 
