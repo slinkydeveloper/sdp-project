@@ -7,7 +7,8 @@ option java_package = "com.slinkydeveloper.sdp.node";
 option java_multiple_files = true;
 
 message SensorReadingsToken {
-  map<int32, double> lastMeasurements = 1;
+  string generationUUID = 1;
+  map<int32, double> lastMeasurements = 2;
 }
 
 enum DiscoveryTokenType {

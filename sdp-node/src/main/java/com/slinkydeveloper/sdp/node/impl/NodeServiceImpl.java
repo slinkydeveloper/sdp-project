@@ -54,7 +54,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             generateNewSensorReadingsToken -> {
                 if (generateNewSensorReadingsToken && this.sensorReadingsTokenOnHold.isEmpty()) {
                     LOG.info("As a LEADER of the discovery, I'm going to regenerate the sensor readings token");
-                    dispatchSensorReadingsToken(SensorReadingsToken.newBuilder().build());
+                    dispatchSensorReadingsToken(SensorReadingsToken.newBuilder().setGenerationUUID(UUID.randomUUID().toString()).build());
                 }
             }
         );
@@ -162,7 +162,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             }
         }
         LOG.info("I'm alone in the network");
-        this.sensorReadingsTokenOnHold.set(SensorReadingsToken.newBuilder().build());
+        this.sensorReadingsTokenOnHold.set(SensorReadingsToken.newBuilder().setGenerationUUID(UUID.randomUUID().toString()).build());
     }
 
     /**
