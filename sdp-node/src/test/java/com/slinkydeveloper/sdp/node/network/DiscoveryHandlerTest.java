@@ -1,4 +1,4 @@
-package com.slinkydeveloper.sdp.node.discovery;
+package com.slinkydeveloper.sdp.node.network;
 
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class DiscoveryStateMachineTest {
+class DiscoveryHandlerTest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
@@ -25,11 +25,11 @@ class DiscoveryStateMachineTest {
                 new AbstractMap.SimpleImmutableEntry<>(4, "localhost:8083")
             );
 
-        List<DiscoveryStateMachine> nodes = Arrays.asList(
-            new DiscoveryStateMachine(1, "localhost:8080", assertCorrectDiscovery),
-            new DiscoveryStateMachine(2, "localhost:8081", assertCorrectDiscovery),
-            new DiscoveryStateMachine(3, "localhost:8082", assertCorrectDiscovery),
-            new DiscoveryStateMachine(4, "localhost:8083", assertCorrectDiscovery)
+        List<DiscoveryHandler> nodes = Arrays.asList(
+            new DiscoveryHandler(1, "localhost:8080", assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(2, "localhost:8081", assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(3, "localhost:8082", assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(4, "localhost:8083", assertCorrectDiscovery, () -> {})
         );
 
         DiscoveryToken token = nodes.get(startingNode).startDiscovery();
@@ -38,7 +38,7 @@ class DiscoveryStateMachineTest {
 
         int i = (startingNode + 1) % 4;
         while (token != null) {
-            token = nodes.get(i).onReceivedDiscovery(token);
+            token = nodes.get(i).handleReceivedDiscovery(token);
             i = (i + 1) % 4;
         }
     }

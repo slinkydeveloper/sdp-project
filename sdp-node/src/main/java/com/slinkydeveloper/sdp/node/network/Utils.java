@@ -1,4 +1,4 @@
-package com.slinkydeveloper.sdp.node.impl;
+package com.slinkydeveloper.sdp.node.network;
 
 import com.slinkydeveloper.sdp.node.NodeGrpc;
 import io.grpc.ManagedChannelBuilder;
@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class Utils {
 
-    static NodeGrpc.NodeBlockingStub buildNewClient(String address) {
+    public static NodeGrpc.NodeBlockingStub buildNewClient(String address) {
         return NodeGrpc.newBlockingStub(
             ManagedChannelBuilder
                 .forTarget(address)
@@ -19,7 +19,7 @@ public class Utils {
         );
     }
 
-    static List<Integer> generateNextNeighboursList(Set<Integer> neighbours, int myId) {
+    public static List<Integer> generateNextNeighboursList(Set<Integer> neighbours, int myId) {
         List<Integer> nextNeighbours = new ArrayList<>(neighbours);
         if (!nextNeighbours.contains(myId)) {
             nextNeighbours.add(myId);

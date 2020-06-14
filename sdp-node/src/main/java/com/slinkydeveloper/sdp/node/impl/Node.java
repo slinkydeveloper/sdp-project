@@ -28,6 +28,7 @@ public class Node {
         // Start the measurements simulator
         OverlappingSlidingWindowBuffer<Double> buffer = new OverlappingSlidingWindowBuffer<>(10, 0.5, OverlappingSlidingWindowBuffer.AVERAGE_REDUCER);
         PM10Simulator simulator = new PM10Simulator(buffer);
+        simulator.setDaemon(true);
         simulator.start();
 
         NodeServiceServer serviceServer = new NodeServiceServer(

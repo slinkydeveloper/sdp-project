@@ -1,5 +1,6 @@
-package com.slinkydeveloper.sdp.node.discovery;
+package com.slinkydeveloper.sdp.node.network;
 
+import com.slinkydeveloper.sdp.concurrent.AtomicFlag;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.DiscoveryTokenType;
@@ -9,24 +10,26 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
- * This class is not thread safe
+ * This class is thread safe
  */
-public class DiscoveryStateMachine {
+public class DiscoveryHandler {
 
-    private final static Logger LOG = LoggerConfig.getLogger(DiscoveryStateMachine.class);
+    private final static Logger LOG = LoggerConfig.getLogger(DiscoveryHandler.class);
 
     private final int myId;
     private final String myAddress;
-    private final Consumer<Map<Integer, String>> endDiscoveryCallback;
+    private final Consumer<Map<Integer, String>> newKnownHostsCallback;
+    private final Runnable endDiscoveryCallback;
 
-    private boolean partecipating;
+    private final AtomicFlag partecipating;
 
-    public DiscoveryStateMachine(int myId, String myAddress, Consumer<Map<Integer, String>> endDiscoveryCallback) {
+    public DiscoveryHandler(int myId, String myAddress, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback) {
         this.myId = myId;
         this.myAddress = myAddress;
+        this.newKnownHostsCallback = newKnownHostsCallback;
         this.endDiscoveryCallback = endDiscoveryCallback;
 
-        this.partecipating = false;
+        this.partecipating = new AtomicFlag("Participating to discovery", false);
     }
 
     /**
@@ -34,7 +37,7 @@ public class DiscoveryStateMachine {
      */
     public DiscoveryToken startDiscovery() {
         LOG.fine("Generating start discovery token");
-        this.partecipating = true;
+        this.partecipating.setTrue();
         return DiscoveryToken.newBuilder()
             .setType(DiscoveryTokenType.DISCOVERY)
             .setLeader(this.myId)
@@ -48,7 +51,7 @@ public class DiscoveryStateMachine {
      * @param token received token
      * @return the token to send to the next neighbour, if any
      */
-    public DiscoveryToken onReceivedDiscovery(DiscoveryToken token) {
+    public DiscoveryToken handleReceivedDiscovery(DiscoveryToken token) {
         LOG.fine("New message: \n" + token.toString());
         // Algorithm implemented as https://en.wikipedia.org/wiki/Chang_and_Roberts_algorithm#The_algorithm
         // but tweaked to do the service discovery
@@ -59,22 +62,25 @@ public class DiscoveryStateMachine {
                 .putKnownHosts(this.myId, this.myAddress);
 
             if (token.getLeader() > this.myId) {
-                this.partecipating = true;
+                this.partecipating.setTrue();
                 return newTokenBuilder.build();
             } else if (token.getLeader() < this.myId) {
-                if (this.partecipating) {
+                if (this.partecipating.value()) {
                     LOG.fine("Discarding message because I'm already partecipating and the leader id is lower than mine");
                     return null;
                 } else {
-                    this.partecipating = true;
+                    this.partecipating.setTrue();
                     return newTokenBuilder.setLeader(this.myId).build();
                 }
             } else {
                 LOG.fine("Discovery phase completed. Notifying results to the network");
 
-                this.partecipating = false;
-                // Notify the new known hosts
-                this.endDiscoveryCallback.accept(token.getKnownHostsMap());
+                // Notify the new hosts in the same lock of partecipating flag
+                this.partecipating.execute((old) -> {
+                    this.newKnownHostsCallback.accept(token.getKnownHostsMap());
+                    return false;
+                });
+                this.endDiscoveryCallback.run();
                 return newTokenBuilder
                     .setType(DiscoveryTokenType.DISCOVERED)
                     .build();
@@ -84,15 +90,22 @@ public class DiscoveryStateMachine {
                 LOG.fine("Discarding message because the discovery is finished");
                 return null;
             } else {
-                this.partecipating = false;
-                this.endDiscoveryCallback.accept(token.getKnownHostsMap());
+                this.partecipating.execute((old) -> {
+                    this.newKnownHostsCallback.accept(token.getKnownHostsMap());
+                    return false;
+                });
+                this.endDiscoveryCallback.run();
                 return token;
             }
         }
     }
 
     public boolean isDiscovering() {
-        return this.partecipating;
+        return this.partecipating.value();
+    }
+
+    public boolean executeIfIsDiscovering(Runnable runnable) {
+        return this.partecipating.executeOnTrue(runnable);
     }
 
 }

@@ -79,7 +79,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
         this.measurements[this.measurementsWriteIndex] = m;
         this.measurementsWriteIndex = (this.measurementsWriteIndex + 1) % this.measurements.length;
         this.written++;
-        //LOG.fine("Measurement: " + m.getValue() + ", timestamp: " + m.getTimestamp() + ", written: " + this.written);
+        LOG.finest("Measurement: " + m.getValue() + ", timestamp: " + m.getTimestamp() + ", written: " + this.written);
         if (this.written >= this.measurements.length && (this.written % this.overlapNumber == 0)) {
             generateNewReducedMeasurement();
         }

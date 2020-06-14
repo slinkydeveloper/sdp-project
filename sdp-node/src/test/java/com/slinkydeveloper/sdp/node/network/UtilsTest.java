@@ -1,4 +1,4 @@
-package com.slinkydeveloper.sdp.node.impl;
+package com.slinkydeveloper.sdp.node.network;
 
 import org.junit.jupiter.api.Test;
 

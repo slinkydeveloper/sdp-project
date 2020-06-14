@@ -18,9 +18,9 @@ public class LoggerConfig {
                 if (instance == null) {
                     instance = new ConsoleHandler();
                     instance.setLevel(
-                            Level.parse(
-                                    Optional.ofNullable(System.getenv("SDP_LOG")).orElse("INFO")
-                            )
+                        Level.parse(
+                            Optional.ofNullable(System.getenv("SDP_LOG")).orElse("INFO")
+                        )
                     );
                 }
             }
@@ -33,9 +33,9 @@ public class LoggerConfig {
         logger.setUseParentHandlers(false);
         logger.addHandler(getConsoleHandlerInstance());
         logger.setLevel(
-                Level.parse(
-                        Optional.ofNullable(System.getenv("SDP_LOG")).orElse("INFO")
-                )
+            Level.parse(
+                Optional.ofNullable(System.getenv("SDP_LOG")).orElse("INFO")
+            )
         );
         return logger;
     }

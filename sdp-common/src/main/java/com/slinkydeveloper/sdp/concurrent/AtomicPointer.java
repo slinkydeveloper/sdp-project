@@ -21,8 +21,10 @@ public class AtomicPointer<T> {
     }
 
     public synchronized void clear() {
-        LOG.fine("Cleared value " + name);
-        this.value = null;
+        if (value != null) {
+            LOG.fine("Cleared value " + name);
+            this.value = null;
+        }
     }
 
     public synchronized void set(T value) {
