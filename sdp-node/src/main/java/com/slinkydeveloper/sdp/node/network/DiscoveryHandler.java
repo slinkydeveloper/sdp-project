@@ -5,6 +5,7 @@ import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.DiscoveryTokenType;
 
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -55,7 +56,7 @@ public class DiscoveryHandler {
      * @param token received token
      * @return the token to send to the next neighbour, if any
      */
-    public DiscoveryToken handleReceivedDiscovery(DiscoveryToken token, boolean hasNewHosts, Map<Integer, String> previousKnownHosts) {
+    public Map.Entry<Boolean, DiscoveryToken> handleReceivedDiscovery(DiscoveryToken token, boolean hasNewHosts, Map<Integer, String> previousKnownHosts) {
         // Algorithm implemented as https://en.wikipedia.org/wiki/Chang_and_Roberts_algorithm#The_algorithm
         // but tweaked to do the service discovery
         if (token.getType() == DiscoveryTokenType.DISCOVERY) {
@@ -70,7 +71,7 @@ public class DiscoveryHandler {
                     this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
                     return true;
                 });
-                return newTokenBuilder.build();
+                return new AbstractMap.SimpleImmutableEntry<>(true, newTokenBuilder.build());
             } else if (token.getLeader() < this.myId) {
                 // Dedup the discovery token only if 'm already discovering or this token has new hosts we're unaware of
                 if (!this.isDiscovering() || hasNewHosts) {
@@ -78,14 +79,14 @@ public class DiscoveryHandler {
                         this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
                         return true;
                     });
-                    return newTokenBuilder.setLeader(this.myId).build();
+                    return new AbstractMap.SimpleImmutableEntry<>(true, newTokenBuilder.setLeader(this.myId).build());
                 } else {
                     LOG.fine("Discarding message because I'm already participating and the leader id is lower than mine");
                     this.partecipating.execute((old) -> {
                         this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
                         return true;
                     });
-                    return null;
+                    return new AbstractMap.SimpleImmutableEntry<>(true, null);
                 }
             } else {
                 DiscoveryToken discoveredToken = newTokenBuilder
@@ -100,20 +101,20 @@ public class DiscoveryHandler {
                     return false;
                 });
                 this.endDiscoveryCallback.run();
-                return discoveredToken;
+                return new AbstractMap.SimpleImmutableEntry<>(false, discoveredToken);
             }
         } else {
             if (token.getLeader() == this.myId) {
                 LOG.fine("Discarding DISCOVERED token because I'm the leader");
                 //TODO leader should notify to gateway the end of the discovery
-                return null;
+                return new AbstractMap.SimpleImmutableEntry<>(false, null);
             } else {
                 this.partecipating.execute((old) -> {
                     this.newKnownHostsCallback.accept(token.getKnownHostsMap());
                     return false;
                 });
                 this.endDiscoveryCallback.run();
-                return token;
+                return new AbstractMap.SimpleImmutableEntry<>(false, token);
             }
         }
     }

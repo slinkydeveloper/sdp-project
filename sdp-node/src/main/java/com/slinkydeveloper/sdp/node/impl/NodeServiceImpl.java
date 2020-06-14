@@ -8,6 +8,7 @@ import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.acquisition.SensorReadingsHandler;
 import com.slinkydeveloper.sdp.node.network.DiscoveryHandler;
 import com.slinkydeveloper.sdp.node.network.NodesRing;
+import com.slinkydeveloper.sdp.timer.TimerScheduler;
 import io.grpc.stub.StreamObserver;
 
 import java.util.*;
@@ -31,6 +32,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final long waitMillis;
 
+    private final TimerScheduler timerScheduler;
+
     public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer) {
         this.myId = myId;
         this.myAddress = myAddress;
@@ -42,6 +45,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.discoveryHandler = new DiscoveryHandler(this.myId, this.myAddress, this.nodesRing::insertNodes, this.nodesRing::setNodes, this::checkAndDispatchTokenOnHold);
 
         this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0l);
+
+        this.timerScheduler = new TimerScheduler();
     }
 
     @Override
@@ -68,11 +73,12 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     @Override
     public void passDiscoveryToken(DiscoveryToken request, StreamObserver<Empty> responseObserver) {
+        stopDiscoveryTimeoutTimer();
         LOG.info("Received discovery token:\n" + request);
 
         // Generate the new token to forward
         Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
-        DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(
+        Map.Entry<Boolean, DiscoveryToken> token = this.discoveryHandler.handleReceivedDiscovery(
             request,
             minus(
                 request.getKnownHostsMap().keySet(),
@@ -84,8 +90,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         // Reply to the client
         reply(responseObserver);
 
-        if (token != null) {
-            dispatchDiscoveryToken(token);
+        if (token.getValue() != null) {
+            dispatchDiscoveryToken(token.getValue(), token.getKey());
+        } else if (token.getKey()) {
+            startDiscoveryTimeoutTimer();
         }
     }
 
@@ -103,7 +111,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         // Reply to the client
         reply(responseObserver);
 
-        dispatchDiscoveryToken(token);
+        dispatchDiscoveryToken(token, true);
     }
 
     @Override
@@ -145,6 +153,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
      * Start a new discovery (this operation is performed when the server is started)
      */
     private void startDiscoveryAfterFailure(Set<Integer> failedNodes) {
+        this.stopDiscoveryTimeoutTimer();
+
         LOG.warning("Something went wrong, trying to execute discovery again");
 
         // Generate starting token
@@ -153,7 +163,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed);
 
         // Dispatch that token
-        dispatchDiscoveryToken(token);
+        dispatchDiscoveryToken(token, true);
     }
 
     private void checkAndDispatchTokenOnHold() {
@@ -173,7 +183,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             try {
                 nextNeighbour.getValue().passSensorsReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
-                //TODO do we need this?
                 this.sensorReadingsTokenOnHold.clear();
             } catch (Exception e) {
                 LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + nextNeighbour.getKey() + ": " + e);
@@ -186,7 +195,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
     }
 
-    private void dispatchDiscoveryToken(DiscoveryToken token) {
+    private void dispatchDiscoveryToken(DiscoveryToken token, boolean startTimer) {
         // Forward to next neighbour and just skip failing ones
         int i = 0;
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> nextNeighbour = this.nodesRing.getNext(0);
@@ -195,6 +204,9 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             try {
                 nextNeighbour.getValue().passDiscoveryToken(token);
                 LOG.info("Discovery token passed successfully to " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ")");
+                if (startTimer) {
+                    startDiscoveryTimeoutTimer();
+                }
                 return;
             } catch (Exception e) {
                 LOG.warning("Skipping " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ") because something wrong happened while passing the token: " + e);
@@ -219,6 +231,27 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private void startDiscoveryTimeoutTimer() {
+        long timeout = computeTimeout(1);
+        this.timerScheduler.schedule(
+            "discovery-timeout",
+            timeout,
+            () -> this.startDiscoveryAfterFailure(Collections.emptySet())
+        );
+    }
+
+    private void stopDiscoveryTimeoutTimer() {
+        this.timerScheduler.cancel("discovery-timeout");
+    }
+
+    private long computeTimeout(long factor) {
+        int size = this.nodesRing.getKnownHosts().size();
+        if (size == 0) {
+            return Long.MAX_VALUE;
+        }
+        return size * 10 * 1000 * factor;
     }
 
 }
