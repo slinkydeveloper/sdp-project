@@ -39,6 +39,14 @@ public class AtomicFlag {
         return false;
     }
 
+    public synchronized boolean executeOnFalse(Runnable runnable) {
+        if (!value) {
+            runnable.run();
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Returns the old value
      *

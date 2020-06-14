@@ -135,16 +135,20 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private void startDiscoveryAfterFailure() {
         LOG.warning("Something went wrong, trying to execute discovery again");
 
-        // Generate starting token
-        DiscoveryToken token = this.discoveryHandler.startDiscovery(this.nodesRing.getKnownHosts());
+        if (!this.discoveryHandler.isDiscovering()) {
+            // Generate starting token
+            DiscoveryToken token = this.discoveryHandler.startDiscovery(this.nodesRing.getKnownHosts());
 
-        // Dispatch that token
-        dispatchDiscoveryToken(token);
+            // Dispatch that token
+            dispatchDiscoveryToken(token);
+        } else {
+            checkAndDispatchTokenOnHold();
+        }
     }
 
     private void checkAndDispatchTokenOnHold() {
         // If there is a sensor readings token on hold, then forward it
-        SensorsReadingsToken token = this.sensorReadingsTokenOnHold.value();
+        SensorsReadingsToken token = this.sensorReadingsTokenOnHold.getAndClear();
         if (token != null) {
             LOG.info("Discovery ended and I have the sensor readings token, forwarding:\n" + token);
             dispatchSensorReadingsToken(token);
@@ -163,6 +167,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             try {
                 nextNeighbour.getValue().passSensorsReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
+                //TODO do we need this?
                 this.sensorReadingsTokenOnHold.clear();
             } catch (Exception e) {
                 LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + +nextNeighbour.getKey() + ": " + e);

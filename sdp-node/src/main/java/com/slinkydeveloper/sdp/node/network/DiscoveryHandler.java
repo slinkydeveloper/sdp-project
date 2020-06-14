@@ -98,6 +98,7 @@ public class DiscoveryHandler {
         } else {
             if (token.getLeader() == this.myId) {
                 LOG.fine("Discarding message because the discovery is finished");
+                //TODO leader should notify to gateway the end of the discovery
                 return null;
             } else {
                 this.partecipating.execute((old) -> {
@@ -115,6 +116,10 @@ public class DiscoveryHandler {
     }
 
     public boolean executeIfIsDiscovering(Runnable runnable) {
+        return this.partecipating.executeOnTrue(runnable);
+    }
+
+    public boolean executeIfNotDiscovering(Runnable runnable) {
         return this.partecipating.executeOnTrue(runnable);
     }
 

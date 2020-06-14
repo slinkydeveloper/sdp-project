@@ -32,8 +32,14 @@ public class AtomicPointer<T> {
         this.value = value;
     }
 
-    public synchronized T value() {
+    public synchronized T get() {
         return this.value;
+    }
+
+    public synchronized T getAndClear() {
+        T val = this.value;
+        this.value = null;
+        return val;
     }
 
     public synchronized boolean isEmpty() {
