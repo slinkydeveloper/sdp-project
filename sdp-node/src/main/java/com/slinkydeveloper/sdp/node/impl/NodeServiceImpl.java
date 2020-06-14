@@ -74,10 +74,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
         DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(
             request,
-            !minus(
-                plus(knownHosts.keySet(), this.myId),
-                request.getKnownHostsMap().keySet()
-            ).isEmpty(),
+            minus(
+                request.getKnownHostsMap().keySet(),
+                plus(knownHosts.keySet(), this.myId)
+            ).size() > 0,
             knownHosts
         );
 
@@ -199,12 +199,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             } catch (Exception e) {
                 LOG.warning("Skipping " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ") because something wrong happened while passing the token: " + e);
 
-                // We need to remove this host from the map, because it's unreachable.
-                token = token.toBuilder()
-                    .removePreviousKnownHosts(nextNeighbour.getKey())
-                    .removeKnownHosts(nextNeighbour.getKey())
-                    .build();
-
+                token = this.discoveryHandler.fixTokenWhenHostIsUnavailable(token, nextNeighbour.getKey());
                 i++;
                 nextNeighbour = this.nodesRing.getNext(i);
             }

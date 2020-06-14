@@ -104,7 +104,7 @@ public class DiscoveryHandler {
             }
         } else {
             if (token.getLeader() == this.myId) {
-                LOG.fine("Discarding message because the discovery is finished");
+                LOG.fine("Discarding DISCOVERED token because I'm the leader");
                 //TODO leader should notify to gateway the end of the discovery
                 return null;
             } else {
@@ -116,6 +116,18 @@ public class DiscoveryHandler {
                 return token;
             }
         }
+    }
+
+    public DiscoveryToken fixTokenWhenHostIsUnavailable(DiscoveryToken token, int unavailableNode) {
+        DiscoveryToken.Builder builder = token.toBuilder()
+            .removePreviousKnownHosts(unavailableNode)
+            .removeKnownHosts(unavailableNode);
+
+        if (token.getLeader() == unavailableNode) {
+            builder.setLeader(this.myId);
+        }
+
+        return builder.build();
     }
 
     public boolean isDiscovering() {
