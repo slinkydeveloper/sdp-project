@@ -18,8 +18,9 @@ enum DiscoveryTokenType {
 message DiscoveryToken {
   DiscoveryTokenType type = 1;
   int32 leader = 2;
-  map<int32, string> knownHosts = 3;
-  map<int32, string> previousKnownHosts = 4;
+  bool generateNewSensorReadingsToken = 3;
+  map<int32, string> knownHosts = 4;
+  map<int32, string> previousKnownHosts = 5;
 }
 
 message SearchToken {

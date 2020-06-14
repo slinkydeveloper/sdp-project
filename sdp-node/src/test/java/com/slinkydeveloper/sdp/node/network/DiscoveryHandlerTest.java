@@ -23,19 +23,33 @@ class DiscoveryHandlerTest {
             );
 
         List<DiscoveryHandler> nodes = Arrays.asList(
-            new DiscoveryHandler(1, "localhost:8080", m -> {}, assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(2, "localhost:8081", m -> {}, assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(3, "localhost:8082", m -> {}, assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(4, "localhost:8083", m -> {}, assertCorrectDiscovery, () -> {})
+            new DiscoveryHandler(1, "localhost:8080", m -> {
+            }, assertCorrectDiscovery, () -> {
+            }, m -> {
+            }),
+            new DiscoveryHandler(2, "localhost:8081", m -> {
+            }, assertCorrectDiscovery, () -> {
+            }, m -> {
+            }),
+            new DiscoveryHandler(3, "localhost:8082", m -> {
+            }, assertCorrectDiscovery, () -> {
+            }, m -> {
+            }),
+            new DiscoveryHandler(4, "localhost:8083", m -> {
+            }, assertCorrectDiscovery, () -> {
+            }, m -> {
+            })
         );
 
-        DiscoveryToken token = nodes.get(startingNode).startDiscovery(Collections.emptyMap());
+        DiscoveryToken token = nodes.get(startingNode).startDiscovery(Collections.emptyMap(), false);
         assertThat(token)
             .isNotNull();
 
         int i = (startingNode + 1) % 4;
         while (token != null) {
-            token = nodes.get(i).handleReceivedDiscovery(token, false, Collections.emptyMap()).getValue();
+            token = Optional.ofNullable(
+                nodes.get(i).handleReceivedDiscovery(token, false, Collections.emptyMap()).getValue()
+            ).map(DiscoveryToken.Builder::build).orElse(null);
             i = (i + 1) % 4;
         }
     }

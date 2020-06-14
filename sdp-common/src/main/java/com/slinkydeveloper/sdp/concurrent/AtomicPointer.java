@@ -22,13 +22,13 @@ public class AtomicPointer<T> {
 
     public synchronized void clear() {
         if (value != null) {
-            LOG.fine("Cleared value " + name);
+            LOG.fine("Cleared value '" + name + "'");
             this.value = null;
         }
     }
 
     public synchronized void set(T value) {
-        LOG.fine("Setting value " + name);
+        LOG.fine("Setting value '" + name + "'");
         this.value = value;
     }
 

@@ -42,7 +42,20 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.nodesRing = new NodesRing(myId, myAddress, initialKnownHosts);
 
         this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer);
-        this.discoveryHandler = new DiscoveryHandler(this.myId, this.myAddress, this.nodesRing::insertNodes, this.nodesRing::setNodes, this::checkAndDispatchTokenOnHold);
+        this.discoveryHandler = new DiscoveryHandler(
+            this.myId,
+            this.myAddress,
+            this.nodesRing::insertNodes,
+            this.nodesRing::setNodes,
+            this::checkAndDispatchTokenOnHold,
+            generateNewSensorReadingsToken -> {
+                if (generateNewSensorReadingsToken) {
+                    LOG.info("As a LEADER of the discovery, I'm going to regenerate the sensor readings token");
+                    this.sensorReadingsTokenOnHold.set(SensorsReadingsToken.newBuilder().build());
+                    this.checkAndDispatchTokenOnHold();
+                }
+            }
+        );
 
         this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0l);
 
@@ -51,6 +64,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     @Override
     public void passSensorsReadingsToken(final SensorsReadingsToken request, StreamObserver<Empty> responseObserver) {
+        stopSensorReadingsTimeoutTimer();
         LOG.info("Received sensor readings token:\n" + request);
 
         // If we're discovering nodes, then keep the token on hold
@@ -61,7 +75,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
 
         // Generate the new token to forward
-        SensorsReadingsToken newToken = sensorReadingsHandler.handleSensorsReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
+        SensorsReadingsToken newToken = sensorReadingsHandler
+            .handleSensorsReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
 
         // Reply to the client
         reply(responseObserver);
@@ -78,7 +93,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         // Generate the new token to forward
         Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
-        Map.Entry<Boolean, DiscoveryToken> token = this.discoveryHandler.handleReceivedDiscovery(
+        Map.Entry<Boolean, DiscoveryToken.Builder> token = this.discoveryHandler.handleReceivedDiscovery(
             request,
             minus(
                 request.getKnownHostsMap().keySet(),
@@ -91,7 +106,12 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         reply(responseObserver);
 
         if (token.getValue() != null) {
-            dispatchDiscoveryToken(token.getValue(), token.getKey());
+            DiscoveryToken.Builder builder = token.getValue();
+            boolean hasTokenOnHold = !this.sensorReadingsTokenOnHold.isEmpty();
+            if (hasTokenOnHold) {
+                builder.setGenerateNewSensorReadingsToken(false);
+            }
+            dispatchDiscoveryToken(builder.build(), token.getKey());
         } else if (token.getKey()) {
             startDiscoveryTimeoutTimer();
         }
@@ -106,7 +126,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         // Generate the discovery start token
         DiscoveryToken token = discoveryHandler
-            .startDiscovery(this.nodesRing.getKnownHosts());
+            .startDiscovery(this.nodesRing.getKnownHosts(), false);
 
         // Reply to the client
         reply(responseObserver);
@@ -152,7 +172,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     /**
      * Start a new discovery (this operation is performed when the server is started)
      */
-    private void startDiscoveryAfterFailure(Set<Integer> failedNodes) {
+    private void startDiscoveryAfterFailure(Set<Integer> failedNodes, boolean askToGenerateNewSensorReadingsToken) {
         this.stopDiscoveryTimeoutTimer();
 
         LOG.warning("Something went wrong, trying to execute discovery again");
@@ -160,7 +180,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         // Generate starting token
         Map<Integer, String> previousKnownHostsMinusFailed = new HashMap<>(this.nodesRing.getKnownHosts());
         failedNodes.forEach(previousKnownHostsMinusFailed::remove);
-        DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed);
+        DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed, askToGenerateNewSensorReadingsToken);
 
         // Dispatch that token
         dispatchDiscoveryToken(token, true);
@@ -183,12 +203,13 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             try {
                 nextNeighbour.getValue().passSensorsReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
+                this.startSensorReadingsTimeoutTimer();
                 this.sensorReadingsTokenOnHold.clear();
             } catch (Exception e) {
                 LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + nextNeighbour.getKey() + ": " + e);
                 e.printStackTrace();
                 this.sensorReadingsTokenOnHold.set(token);
-                startDiscoveryAfterFailure(Collections.singleton(nextNeighbour.getKey()));
+                startDiscoveryAfterFailure(Collections.singleton(nextNeighbour.getKey()), false);
             }
         } else {
             throw new IllegalStateException("All the neighbours are unavailable!");
@@ -238,12 +259,25 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.timerScheduler.schedule(
             "discovery-timeout",
             timeout,
-            () -> this.startDiscoveryAfterFailure(Collections.emptySet())
+            () -> this.startDiscoveryAfterFailure(Collections.emptySet(), false)
         );
     }
 
     private void stopDiscoveryTimeoutTimer() {
         this.timerScheduler.cancel("discovery-timeout");
+    }
+
+    private void startSensorReadingsTimeoutTimer() {
+        long timeout = computeTimeout(1);
+        this.timerScheduler.schedule(
+            "sensor-readings-timeout",
+            timeout,
+            () -> this.startDiscoveryAfterFailure(Collections.emptySet(), true)
+        );
+    }
+
+    private void stopSensorReadingsTimeoutTimer() {
+        this.timerScheduler.cancel("sensor-readings-timeout");
     }
 
     private long computeTimeout(long factor) {
