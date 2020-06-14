@@ -3,7 +3,10 @@ package com.slinkydeveloper.sdp.node.impl;
 import com.google.protobuf.Empty;
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
-import com.slinkydeveloper.sdp.node.*;
+import com.slinkydeveloper.sdp.node.DiscoveryToken;
+import com.slinkydeveloper.sdp.node.NewNeighbour;
+import com.slinkydeveloper.sdp.node.NodeGrpc;
+import com.slinkydeveloper.sdp.node.SensorReadingsToken;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.acquisition.SensorReadingsHandler;
 import com.slinkydeveloper.sdp.node.network.DiscoveryHandler;
@@ -24,7 +27,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private final int myId;
     private final String myAddress;
 
-    private final AtomicPointer<SensorsReadingsToken> sensorReadingsTokenOnHold;
+    private final AtomicPointer<SensorReadingsToken> sensorReadingsTokenOnHold;
     private final NodesRing nodesRing;
 
     private final SensorReadingsHandler sensorReadingsHandler;
@@ -49,10 +52,9 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             this.nodesRing::setNodes,
             this::checkAndDispatchTokenOnHold,
             generateNewSensorReadingsToken -> {
-                if (generateNewSensorReadingsToken) {
+                if (generateNewSensorReadingsToken && this.sensorReadingsTokenOnHold.isEmpty()) {
                     LOG.info("As a LEADER of the discovery, I'm going to regenerate the sensor readings token");
-                    this.sensorReadingsTokenOnHold.set(SensorsReadingsToken.newBuilder().build());
-                    this.checkAndDispatchTokenOnHold();
+                    dispatchSensorReadingsToken(SensorReadingsToken.newBuilder().build());
                 }
             }
         );
@@ -63,7 +65,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     }
 
     @Override
-    public void passSensorsReadingsToken(final SensorsReadingsToken request, StreamObserver<Empty> responseObserver) {
+    public void passSensorReadingsToken(final SensorReadingsToken request, StreamObserver<Empty> responseObserver) {
         stopSensorReadingsTimeoutTimer();
         LOG.info("Received sensor readings token:\n" + request);
 
@@ -75,8 +77,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
 
         // Generate the new token to forward
-        SensorsReadingsToken newToken = sensorReadingsHandler
-            .handleSensorsReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
+        SensorReadingsToken newToken = sensorReadingsHandler
+            .handleSensorReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
 
         // Reply to the client
         reply(responseObserver);
@@ -107,8 +109,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         if (token.getValue() != null) {
             DiscoveryToken.Builder builder = token.getValue();
-            boolean hasTokenOnHold = !this.sensorReadingsTokenOnHold.isEmpty();
-            if (hasTokenOnHold) {
+            if (!this.sensorReadingsTokenOnHold.isEmpty()) {
                 builder.setGenerateNewSensorReadingsToken(false);
             }
             dispatchDiscoveryToken(builder.build(), token.getKey());
@@ -132,11 +133,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         reply(responseObserver);
 
         dispatchDiscoveryToken(token, true);
-    }
-
-    @Override
-    public void doYouHaveTheToken(SearchToken request, StreamObserver<Empty> responseObserver) {
-        responseObserver.onError(new IllegalStateException("Method doYouHaveTheToken not implemented"));
     }
 
     /**
@@ -166,7 +162,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             }
         }
         LOG.info("I'm alone in the network");
-        this.sensorReadingsTokenOnHold.set(SensorsReadingsToken.newBuilder().build());
+        this.sensorReadingsTokenOnHold.set(SensorReadingsToken.newBuilder().build());
     }
 
     /**
@@ -188,20 +184,20 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private void checkAndDispatchTokenOnHold() {
         // If there is a sensor readings token on hold, then forward it
-        SensorsReadingsToken token = this.sensorReadingsTokenOnHold.getAndClear();
+        SensorReadingsToken token = this.sensorReadingsTokenOnHold.getAndClear();
         if (token != null) {
             LOG.info("Discovery ended and I have the sensor readings token, forwarding:\n" + token);
             dispatchSensorReadingsToken(token);
         }
     }
 
-    private void dispatchSensorReadingsToken(SensorsReadingsToken token) {
+    private void dispatchSensorReadingsToken(SensorReadingsToken token) {
         // Forward to next neighbour
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> nextNeighbour = nodesRing.getNext(0);
         if (nextNeighbour != null) {
             waitBeforeDispatch();
             try {
-                nextNeighbour.getValue().passSensorsReadingsToken(token);
+                nextNeighbour.getValue().passSensorReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
                 this.startSensorReadingsTimeoutTimer();
                 this.sensorReadingsTokenOnHold.clear();
@@ -270,6 +266,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private void startSensorReadingsTimeoutTimer() {
         long timeout = computeTimeout(1);
         this.timerScheduler.schedule(
+            s -> !s.contains("discovery-timeout"),
             "sensor-readings-timeout",
             timeout,
             () -> this.startDiscoveryAfterFailure(Collections.emptySet(), true)

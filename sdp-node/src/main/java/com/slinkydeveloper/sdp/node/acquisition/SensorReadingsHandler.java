@@ -1,7 +1,7 @@
 package com.slinkydeveloper.sdp.node.acquisition;
 
 import com.slinkydeveloper.sdp.log.LoggerConfig;
-import com.slinkydeveloper.sdp.node.SensorsReadingsToken;
+import com.slinkydeveloper.sdp.node.SensorReadingsToken;
 
 import java.util.Optional;
 import java.util.Set;
@@ -19,8 +19,8 @@ public class SensorReadingsHandler {
         this.slidingWindowBuffer = slidingWindowBuffer;
     }
 
-    public SensorsReadingsToken handleSensorsReadingsToken(final SensorsReadingsToken request, final Set<Integer> knownHosts) {
-        SensorsReadingsToken token = request;
+    public SensorReadingsToken handleSensorReadingsToken(final SensorReadingsToken request, final Set<Integer> knownHosts) {
+        SensorReadingsToken token = request;
         if (!request.containsLastMeasurements(this.myId)) {
             LOG.fine("Token does not contain data from myself");
             Optional<Double> newAverage = slidingWindowBuffer.pollReducedMeasurement();
@@ -35,7 +35,7 @@ public class SensorReadingsHandler {
             LOG.info("We have data from everybody, I'm going to send values to the gateway");
             // TODO send data to gateway
 
-            return SensorsReadingsToken.newBuilder().build();
+            return SensorReadingsToken.newBuilder().build();
         }
         return token;
     }

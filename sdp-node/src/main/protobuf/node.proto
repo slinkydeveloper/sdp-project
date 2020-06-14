@@ -6,7 +6,7 @@ import "google/protobuf/empty.proto";
 option java_package = "com.slinkydeveloper.sdp.node";
 option java_multiple_files = true;
 
-message SensorsReadingsToken {
+message SensorReadingsToken {
   map<int32, double> lastMeasurements = 1;
 }
 
@@ -23,19 +23,13 @@ message DiscoveryToken {
   map<int32, string> previousKnownHosts = 5;
 }
 
-message SearchToken {
-  int32 issuer = 1;
-  bool found = 2;
-}
-
 message NewNeighbour {
   int32 id = 1;
   string address = 2;
 }
 
 service Node {
-  rpc PassSensorsReadingsToken(SensorsReadingsToken) returns (google.protobuf.Empty) {}
+  rpc PassSensorReadingsToken(SensorReadingsToken) returns (google.protobuf.Empty) {}
   rpc PassDiscoveryToken(DiscoveryToken) returns (google.protobuf.Empty) {}
   rpc NotifyNewNeighbour(NewNeighbour) returns (google.protobuf.Empty) {}
-  rpc DoYouHaveTheToken(SearchToken) returns (google.protobuf.Empty) {}
 }

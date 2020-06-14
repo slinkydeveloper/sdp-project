@@ -80,7 +80,7 @@ public class DiscoveryHandler {
                 // - We're not already discovering
                 // - This discovery have new hosts we weren't aware of
                 // - This discovery asks to generate a new SensorReadings token
-                if (!this.isDiscovering() || hasNewHosts || token.getGenerateNewSensorReadingsToken()) {
+                if (!this.isDiscovering() || hasNewHosts) {
                     this.partecipating.execute((old) -> {
                         this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
                         return true;
