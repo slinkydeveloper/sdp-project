@@ -87,7 +87,7 @@ public class OverlappingSlidingWindowBuffer<T> implements Buffer {
 
     private void generateNewReducedMeasurement() {
         T reduced = this.reducer.apply(Arrays.stream(this.measurements));
-        LOG.fine("New reduced value " + reduced.toString());
+        LOG.finest("New reduced value " + reduced.toString());
         synchronized (reducedMeasurements) {
             this.reducedMeasurements.add(reduced);
         }

@@ -23,18 +23,24 @@ public class NodesRing {
     }
 
     public synchronized void insertNewNeighbour(int id, String address) {
-        this.openClients.put(
-            id,
-            Utils.buildNewClient(address)
-        );
+        if (!this.openClients.containsKey(id) && id != this.myId) {
+            this.openClients.put(
+                id,
+                Utils.buildNewClient(address)
+            );
 
-        Set<Integer> newNeighbours = new HashSet<>(this.nextNeighbours);
-        newNeighbours.add(id);
-        this.nextNeighbours = Utils.generateNextNeighboursList(newNeighbours, this.myId);
+            Set<Integer> newNeighbours = new HashSet<>(this.nextNeighbours);
+            newNeighbours.add(id);
+            this.nextNeighbours = Utils.generateNextNeighboursList(newNeighbours, this.myId);
 
-        LOG.fine("New next neighbours: " + this.nextNeighbours);
+            LOG.fine("New next neighbours: " + this.nextNeighbours);
+        }
     }
 
+
+    public synchronized void insertAllNewNeighbours(Map<Integer, String> newNeighbours) {
+        newNeighbours.forEach(this::insertNewNeighbour);
+    }
     public synchronized void configureKnownHosts(Map<Integer, String> knownHosts) {
         Map<Integer, NodeGrpc.NodeBlockingStub> newOpenClients = new HashMap<>();
 

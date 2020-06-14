@@ -64,6 +64,9 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     public void passDiscoveryToken(DiscoveryToken request, StreamObserver<Empty> responseObserver) {
         LOG.info("Received discovery token:\n" + request);
 
+        // The token could contain nodes we don't know, so we need to try to add new neighbours if any
+        this.nodesRing.insertAllNewNeighbours(request.getKnownHostsMap());
+
         // Generate the new token to forward
         DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(request);
 
