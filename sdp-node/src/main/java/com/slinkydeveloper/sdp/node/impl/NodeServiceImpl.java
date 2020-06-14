@@ -11,7 +11,9 @@ import com.slinkydeveloper.sdp.node.network.NodesRing;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
@@ -132,12 +134,14 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     /**
      * Start a new discovery (this operation is performed when the server is started)
      */
-    private void startDiscoveryAfterFailure() {
+    private void startDiscoveryAfterFailure(Set<Integer> failedNodes) {
         LOG.warning("Something went wrong, trying to execute discovery again");
 
         if (!this.discoveryHandler.isDiscovering()) {
             // Generate starting token
-            DiscoveryToken token = this.discoveryHandler.startDiscovery(this.nodesRing.getKnownHosts());
+            Map<Integer, String> previousKnownHostsMinusFailed = new HashMap<>(this.nodesRing.getKnownHosts());
+            failedNodes.forEach(previousKnownHostsMinusFailed::remove);
+            DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed);
 
             // Dispatch that token
             dispatchDiscoveryToken(token);
@@ -170,10 +174,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 //TODO do we need this?
                 this.sensorReadingsTokenOnHold.clear();
             } catch (Exception e) {
-                LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + +nextNeighbour.getKey() + ": " + e);
+                LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + nextNeighbour.getKey() + ": " + e);
                 e.printStackTrace();
                 this.sensorReadingsTokenOnHold.set(token);
-                startDiscoveryAfterFailure();
+                startDiscoveryAfterFailure(Collections.singleton(nextNeighbour.getKey()));
             }
         } else {
             throw new IllegalStateException("All the neighbours are unavailable!");
@@ -197,9 +201,11 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             } catch (Exception e) {
                 LOG.warning("Skipping " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ") because something wrong happened while passing the token: " + e);
 
-                if (token.containsKnownHosts(nextNeighbour.getKey())) {
-                    token = token.toBuilder().removeKnownHosts(nextNeighbour.getKey()).build();
-                }
+                // We need to remove this host from the map, because it's unreachable.
+                token = token.toBuilder()
+                    .removePreviousKnownHosts(nextNeighbour.getKey())
+                    .removeKnownHosts(nextNeighbour.getKey())
+                    .build();
 
                 i++;
                 nextNeighbour = this.nodesRing.getNext(i);

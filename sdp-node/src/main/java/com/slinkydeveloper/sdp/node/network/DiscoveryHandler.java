@@ -56,7 +56,6 @@ public class DiscoveryHandler {
      * @return the token to send to the next neighbour, if any
      */
     public DiscoveryToken handleReceivedDiscovery(DiscoveryToken token) {
-        LOG.fine("New message: \n" + token.toString());
         // Algorithm implemented as https://en.wikipedia.org/wiki/Chang_and_Roberts_algorithm#The_algorithm
         // but tweaked to do the service discovery
         if (token.getType() == DiscoveryTokenType.DISCOVERY) {
@@ -74,6 +73,10 @@ public class DiscoveryHandler {
             } else if (token.getLeader() < this.myId) {
                 if (this.partecipating.value()) {
                     LOG.fine("Discarding message because I'm already partecipating and the leader id is lower than mine");
+                    this.partecipating.execute((old) -> {
+                        this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
+                        return true;
+                    });
                     return null;
                 } else {
                     this.partecipating.execute((old) -> {
