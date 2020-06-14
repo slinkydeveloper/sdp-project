@@ -35,7 +35,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.nodesRing = new NodesRing(myId, myAddress, initialKnownHosts);
 
         this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer);
-        this.discoveryHandler = new DiscoveryHandler(this.myId, this.myAddress, this.nodesRing::configureKnownHosts, this::checkAndDispatchTokenOnHold);
+        this.discoveryHandler = new DiscoveryHandler(this.myId, this.myAddress, this.nodesRing::insertNodes, this.nodesRing::setNodes, this::checkAndDispatchTokenOnHold);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
 
         // Generate the new token to forward
-        SensorsReadingsToken newToken = sensorReadingsHandler.handleSensorsReadingsToken(request, this.nodesRing.getKnownNodes());
+        SensorsReadingsToken newToken = sensorReadingsHandler.handleSensorsReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
 
         // Reply to the client
         reply(responseObserver);
@@ -63,9 +63,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     @Override
     public void passDiscoveryToken(DiscoveryToken request, StreamObserver<Empty> responseObserver) {
         LOG.info("Received discovery token:\n" + request);
-
-        // The token could contain nodes we don't know, so we need to try to add new neighbours if any
-        this.nodesRing.insertAllNewNeighbours(request.getKnownHostsMap());
 
         // Generate the new token to forward
         DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(request);
@@ -83,17 +80,19 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.info("I have a new neighbour:\n" + request);
 
         // Temporary insert a new neighbour
-        this.nodesRing.insertNewNeighbour(request.getId(), request.getAddress());
+        this.nodesRing.insertNode(request.getId(), request.getAddress());
 
         // Generate the discovery start token
-        DiscoveryToken token = discoveryHandler.startDiscovery();
+        DiscoveryToken token = discoveryHandler
+            .startDiscovery(this.nodesRing.getKnownHosts())
+            .toBuilder()
+            .putKnownHosts(request.getId(), request.getAddress())
+            .build();
 
         // Reply to the client
         reply(responseObserver);
 
-        if (token != null) {
-            dispatchDiscoveryToken(token);
-        }
+        dispatchDiscoveryToken(token);
     }
 
     @Override
@@ -106,21 +105,28 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
      * Then we're ready to receive the token
      */
     public void start() {
-        Map.Entry<Integer, NodeGrpc.NodeBlockingStub> previous = this.nodesRing.getPrevious();
-        if (previous != null) {
-            LOG.info("Notifying my presence to the previous node in the ring (id " + previous.getKey() + ")");
-            //TODO What if this node is not reachable?
-            previous.getValue().notifyNewNeighbour(
-                NewNeighbour
-                    .newBuilder()
-                    .setId(this.myId)
-                    .setAddress(this.myAddress)
-                    .build()
-            );
-        } else {
-            LOG.info("I'm alone in the network");
-            this.sensorReadingsTokenOnHold.set(SensorsReadingsToken.newBuilder().build());
+        NewNeighbour message = NewNeighbour
+            .newBuilder()
+            .setId(this.myId)
+            .setAddress(this.myAddress)
+            .build();
+
+        int i = 0;
+        Map.Entry<Integer, NodeGrpc.NodeBlockingStub> previous = nodesRing.getPrevious(i);
+        while (previous != null) {
+            try {
+                previous.getValue().notifyNewNeighbour(message);
+                LOG.info("Notified my presence to the previous node in the ring (id " + previous.getKey() + ")");
+                return;
+            } catch (Exception e) {
+                LOG.warning("Skipping " + (i + 1) + "° previous node (id " + previous.getKey() + ") because something wrong happened while passing the token: " + e);
+                e.printStackTrace();
+                i++;
+                previous = this.nodesRing.getPrevious(i);
+            }
         }
+        LOG.info("I'm alone in the network");
+        this.sensorReadingsTokenOnHold.set(SensorsReadingsToken.newBuilder().build());
     }
 
     /**
@@ -130,7 +136,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.warning("Something went wrong, trying to execute discovery again");
 
         // Generate starting token
-        DiscoveryToken token = this.discoveryHandler.startDiscovery();
+        DiscoveryToken token = this.discoveryHandler.startDiscovery(this.nodesRing.getKnownHosts());
 
         // Dispatch that token
         dispatchDiscoveryToken(token);
@@ -185,11 +191,16 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 return;
             } catch (Exception e) {
                 LOG.warning("Skipping " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ") because something wrong happened while passing the token: " + e);
+
+                if (token.containsKnownHosts(nextNeighbour.getKey())) {
+                    token = token.toBuilder().removeKnownHosts(nextNeighbour.getKey()).build();
+                }
+
                 i++;
                 nextNeighbour = this.nodesRing.getNext(i);
             }
         }
-        this.nodesRing.configureKnownHosts(Collections.emptyMap());
+        this.nodesRing.setNodes(Collections.emptyMap());
         throw new IllegalStateException("All the neighbours are unavailable! Looks like I'm alone!");
     }
 

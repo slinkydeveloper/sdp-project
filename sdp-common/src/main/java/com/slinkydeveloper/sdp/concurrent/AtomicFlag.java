@@ -39,6 +39,12 @@ public class AtomicFlag {
         return false;
     }
 
+    /**
+     * Returns the old value
+     *
+     * @param newValueGenerator
+     * @return
+     */
     public synchronized boolean execute(Function<Boolean, Boolean> newValueGenerator) {
         boolean old = this.value;
         this.value = newValueGenerator.apply(old);

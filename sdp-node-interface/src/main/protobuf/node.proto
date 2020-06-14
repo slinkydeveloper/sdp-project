@@ -19,6 +19,7 @@ message DiscoveryToken {
   DiscoveryTokenType type = 1;
   int32 leader = 2;
   map<int32, string> knownHosts = 3;
+  map<int32, string> previousKnownHosts = 4;
 }
 
 message SearchToken {

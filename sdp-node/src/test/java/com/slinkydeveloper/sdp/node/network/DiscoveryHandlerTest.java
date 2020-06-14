@@ -4,10 +4,7 @@ import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,13 +23,13 @@ class DiscoveryHandlerTest {
             );
 
         List<DiscoveryHandler> nodes = Arrays.asList(
-            new DiscoveryHandler(1, "localhost:8080", assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(2, "localhost:8081", assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(3, "localhost:8082", assertCorrectDiscovery, () -> {}),
-            new DiscoveryHandler(4, "localhost:8083", assertCorrectDiscovery, () -> {})
+            new DiscoveryHandler(1, "localhost:8080", m -> {}, assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(2, "localhost:8081", m -> {}, assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(3, "localhost:8082", m -> {}, assertCorrectDiscovery, () -> {}),
+            new DiscoveryHandler(4, "localhost:8083", m -> {}, assertCorrectDiscovery, () -> {})
         );
 
-        DiscoveryToken token = nodes.get(startingNode).startDiscovery();
+        DiscoveryToken token = nodes.get(startingNode).startDiscovery(Collections.emptyMap());
         assertThat(token)
             .isNotNull();
 

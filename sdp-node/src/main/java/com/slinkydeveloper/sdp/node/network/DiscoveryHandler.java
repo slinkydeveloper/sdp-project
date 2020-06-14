@@ -18,14 +18,16 @@ public class DiscoveryHandler {
 
     private final int myId;
     private final String myAddress;
+    private final Consumer<Map<Integer, String>> temporaryKnownHostsCallback;
     private final Consumer<Map<Integer, String>> newKnownHostsCallback;
     private final Runnable endDiscoveryCallback;
 
     private final AtomicFlag partecipating;
 
-    public DiscoveryHandler(int myId, String myAddress, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback) {
+    public DiscoveryHandler(int myId, String myAddress, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback) {
         this.myId = myId;
         this.myAddress = myAddress;
+        this.temporaryKnownHostsCallback = temporaryKnownHostsCallback;
         this.newKnownHostsCallback = newKnownHostsCallback;
         this.endDiscoveryCallback = endDiscoveryCallback;
 
@@ -35,12 +37,14 @@ public class DiscoveryHandler {
     /**
      * Generate the token to start the discovery from this node
      */
-    public DiscoveryToken startDiscovery() {
+    public DiscoveryToken startDiscovery(Map<Integer, String> previousKnownHosts) {
         LOG.fine("Generating start discovery token");
         this.partecipating.setTrue();
         return DiscoveryToken.newBuilder()
             .setType(DiscoveryTokenType.DISCOVERY)
             .setLeader(this.myId)
+            .putAllPreviousKnownHosts(previousKnownHosts)
+            .putPreviousKnownHosts(this.myId, this.myAddress)
             .putKnownHosts(this.myId, this.myAddress)
             .build();
     }
@@ -62,14 +66,20 @@ public class DiscoveryHandler {
                 .putKnownHosts(this.myId, this.myAddress);
 
             if (token.getLeader() > this.myId) {
-                this.partecipating.setTrue();
+                this.partecipating.execute((old) -> {
+                    this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
+                    return true;
+                });
                 return newTokenBuilder.build();
             } else if (token.getLeader() < this.myId) {
                 if (this.partecipating.value()) {
                     LOG.fine("Discarding message because I'm already partecipating and the leader id is lower than mine");
                     return null;
                 } else {
-                    this.partecipating.setTrue();
+                    this.partecipating.execute((old) -> {
+                        this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
+                        return true;
+                    });
                     return newTokenBuilder.setLeader(this.myId).build();
                 }
             } else {

@@ -24,7 +24,6 @@ public class SensorReadingsHandler {
         if (!request.containsLastMeasurements(this.myId)) {
             LOG.fine("Token does not contain data from myself");
             Optional<Double> newAverage = slidingWindowBuffer.pollReducedMeasurement();
-            LOG.fine("New average: " + newAverage);
             if (newAverage.isPresent()) {
                 token = token.toBuilder().putLastMeasurements(this.myId, newAverage.get()).build();
             }

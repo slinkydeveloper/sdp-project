@@ -13,16 +13,18 @@ public class NodesRing {
     private final int myId;
     private final String myAddress;
 
+    private Map<Integer, String> knownHosts;
     private Map<Integer, NodeGrpc.NodeBlockingStub> openClients;
     private List<Integer> nextNeighbours;
 
     public NodesRing(int myId, String myAddress, Map<Integer, String> initialKnownHosts) {
         this.myId = myId;
         this.myAddress = myAddress;
-        this.configureKnownHosts(initialKnownHosts);
+        this.setNodes(initialKnownHosts);
     }
 
-    public synchronized void insertNewNeighbour(int id, String address) {
+    public synchronized void insertNode(int id, String address) {
+        this.knownHosts.put(id, address);
         if (!this.openClients.containsKey(id) && id != this.myId) {
             this.openClients.put(
                 id,
@@ -38,10 +40,11 @@ public class NodesRing {
     }
 
 
-    public synchronized void insertAllNewNeighbours(Map<Integer, String> newNeighbours) {
-        newNeighbours.forEach(this::insertNewNeighbour);
+    public synchronized void insertNodes(Map<Integer, String> newNeighbours) {
+        newNeighbours.forEach(this::insertNode);
     }
-    public synchronized void configureKnownHosts(Map<Integer, String> knownHosts) {
+    public synchronized void setNodes(Map<Integer, String> knownHosts) {
+        this.knownHosts = new HashMap<>(knownHosts);
         Map<Integer, NodeGrpc.NodeBlockingStub> newOpenClients = new HashMap<>();
 
         knownHosts.forEach((id, address) -> {
@@ -61,30 +64,24 @@ public class NodesRing {
         LOG.fine("New next neighbours: " + this.nextNeighbours);
     }
 
-    public synchronized Map.Entry<Integer, NodeGrpc.NodeBlockingStub> getNext(int index) {
-        if (index >= this.nextNeighbours.size()) {
+    public synchronized Map.Entry<Integer, NodeGrpc.NodeBlockingStub> getNext(int skip) {
+        if (skip >= this.nextNeighbours.size()) {
             return null;
         }
-        int id = this.nextNeighbours.get(index);
+        int id = this.nextNeighbours.get(skip);
         return new AbstractMap.SimpleImmutableEntry<>(id, this.openClients.get(id));
     }
 
-    public synchronized Map.Entry<Integer, NodeGrpc.NodeBlockingStub> getPrevious() {
-        if (this.openClients.isEmpty()) {
+    public synchronized Map.Entry<Integer, NodeGrpc.NodeBlockingStub> getPrevious(int skip) {
+        if (this.openClients.isEmpty() || this.nextNeighbours.size() - 1 - skip < 0) {
             return null;
         }
-        int id = this.nextNeighbours.get(this.nextNeighbours.size() - 1);
+        int id = this.nextNeighbours.get(this.nextNeighbours.size() - 1 - skip);
         return new AbstractMap.SimpleImmutableEntry<>(id, this.openClients.get(id));
     }
 
-    public Set<Integer> getKnownNodes() {
-        Set<Integer> res;
-        synchronized (this) {
-            res = this.openClients.keySet();
-        }
-        res = new HashSet<>(res);
-        res.add(this.myId);
-        return res;
+    public Map<Integer, String> getKnownHosts() {
+        return Collections.unmodifiableMap(this.knownHosts);
     }
 
 }
