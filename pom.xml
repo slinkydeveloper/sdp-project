@@ -45,7 +45,6 @@
     <modules>
         <module>sdp-common</module>
         <module>sdp-node</module>
-        <module>sdp-node-interface</module>
     </modules>
 
     <build>
