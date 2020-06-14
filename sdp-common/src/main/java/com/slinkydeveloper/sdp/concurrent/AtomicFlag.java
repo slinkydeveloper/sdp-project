@@ -56,6 +56,7 @@ public class AtomicFlag {
     public synchronized boolean execute(Function<Boolean, Boolean> newValueGenerator) {
         boolean old = this.value;
         this.value = newValueGenerator.apply(old);
+        LOG.fine("Setting flag '" + name + "' to " + this.value);
         return old;
     }
 }

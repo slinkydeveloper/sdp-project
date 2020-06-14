@@ -35,7 +35,7 @@ class DiscoveryHandlerTest {
 
         int i = (startingNode + 1) % 4;
         while (token != null) {
-            token = nodes.get(i).handleReceivedDiscovery(token);
+            token = nodes.get(i).handleReceivedDiscovery(token, false, Collections.emptyMap());
             i = (i + 1) % 4;
         }
     }

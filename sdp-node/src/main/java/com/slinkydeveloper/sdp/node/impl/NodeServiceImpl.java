@@ -10,10 +10,7 @@ import com.slinkydeveloper.sdp.node.network.DiscoveryHandler;
 import com.slinkydeveloper.sdp.node.network.NodesRing;
 import io.grpc.stub.StreamObserver;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
@@ -29,6 +26,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private final SensorReadingsHandler sensorReadingsHandler;
     private final DiscoveryHandler discoveryHandler;
 
+    private final long waitMillis;
+
     public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer) {
         this.myId = myId;
         this.myAddress = myAddress;
@@ -38,6 +37,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer);
         this.discoveryHandler = new DiscoveryHandler(this.myId, this.myAddress, this.nodesRing::insertNodes, this.nodesRing::setNodes, this::checkAndDispatchTokenOnHold);
+
+        this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0l);
     }
 
     @Override
@@ -67,7 +68,12 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         LOG.info("Received discovery token:\n" + request);
 
         // Generate the new token to forward
-        DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(request);
+        Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
+        DiscoveryToken token = this.discoveryHandler.handleReceivedDiscovery(
+            request,
+            knownHosts.keySet().containsAll(request.getKnownHostsMap().keySet()),
+            knownHosts
+        );
 
         // Reply to the client
         reply(responseObserver);
@@ -86,10 +92,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         // Generate the discovery start token
         DiscoveryToken token = discoveryHandler
-            .startDiscovery(this.nodesRing.getKnownHosts())
-            .toBuilder()
-            .putKnownHosts(request.getId(), request.getAddress())
-            .build();
+            .startDiscovery(this.nodesRing.getKnownHosts());
 
         // Reply to the client
         reply(responseObserver);
@@ -116,6 +119,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         int i = 0;
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> previous = nodesRing.getPrevious(i);
         while (previous != null) {
+            waitBeforeDispatch();
             try {
                 previous.getValue().notifyNewNeighbour(message);
                 LOG.info("Notified my presence to the previous node in the ring (id " + previous.getKey() + ")");
@@ -137,17 +141,13 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private void startDiscoveryAfterFailure(Set<Integer> failedNodes) {
         LOG.warning("Something went wrong, trying to execute discovery again");
 
-        if (!this.discoveryHandler.isDiscovering()) {
-            // Generate starting token
-            Map<Integer, String> previousKnownHostsMinusFailed = new HashMap<>(this.nodesRing.getKnownHosts());
-            failedNodes.forEach(previousKnownHostsMinusFailed::remove);
-            DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed);
+        // Generate starting token
+        Map<Integer, String> previousKnownHostsMinusFailed = new HashMap<>(this.nodesRing.getKnownHosts());
+        failedNodes.forEach(previousKnownHostsMinusFailed::remove);
+        DiscoveryToken token = this.discoveryHandler.startDiscovery(previousKnownHostsMinusFailed);
 
-            // Dispatch that token
-            dispatchDiscoveryToken(token);
-        } else {
-            checkAndDispatchTokenOnHold();
-        }
+        // Dispatch that token
+        dispatchDiscoveryToken(token);
     }
 
     private void checkAndDispatchTokenOnHold() {
@@ -162,12 +162,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private void dispatchSensorReadingsToken(SensorsReadingsToken token) {
         // Forward to next neighbour
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> nextNeighbour = nodesRing.getNext(0);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         if (nextNeighbour != null) {
+            waitBeforeDispatch();
             try {
                 nextNeighbour.getValue().passSensorsReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
@@ -188,12 +184,8 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         // Forward to next neighbour and just skip failing ones
         int i = 0;
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> nextNeighbour = this.nodesRing.getNext(0);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         while (nextNeighbour != null) {
+            waitBeforeDispatch();
             try {
                 nextNeighbour.getValue().passDiscoveryToken(token);
                 LOG.info("Discovery token passed successfully to " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ")");
@@ -218,6 +210,14 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     private void reply(StreamObserver<Empty> emptyStream) {
         emptyStream.onNext(Empty.newBuilder().build());
         emptyStream.onCompleted();
+    }
+
+    private void waitBeforeDispatch() {
+        try {
+            Thread.sleep(this.waitMillis);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

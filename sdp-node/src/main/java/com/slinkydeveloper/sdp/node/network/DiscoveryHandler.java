@@ -55,14 +55,15 @@ public class DiscoveryHandler {
      * @param token received token
      * @return the token to send to the next neighbour, if any
      */
-    public DiscoveryToken handleReceivedDiscovery(DiscoveryToken token) {
+    public DiscoveryToken handleReceivedDiscovery(DiscoveryToken token, boolean hasNewHosts, Map<Integer, String> previousKnownHosts) {
         // Algorithm implemented as https://en.wikipedia.org/wiki/Chang_and_Roberts_algorithm#The_algorithm
         // but tweaked to do the service discovery
         if (token.getType() == DiscoveryTokenType.DISCOVERY) {
             // Add myself in the new token
             DiscoveryToken.Builder newTokenBuilder = token
                 .toBuilder()
-                .putKnownHosts(this.myId, this.myAddress);
+                .putKnownHosts(this.myId, this.myAddress)
+                .putAllPreviousKnownHosts(previousKnownHosts);
 
             if (token.getLeader() > this.myId) {
                 this.partecipating.execute((old) -> {
@@ -71,32 +72,35 @@ public class DiscoveryHandler {
                 });
                 return newTokenBuilder.build();
             } else if (token.getLeader() < this.myId) {
-                if (this.partecipating.value()) {
-                    LOG.fine("Discarding message because I'm already partecipating and the leader id is lower than mine");
-                    this.partecipating.execute((old) -> {
-                        this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
-                        return true;
-                    });
-                    return null;
-                } else {
+                // Dedup the discovery token only if 'm already discovering or this token has new hosts we're unaware of
+                if (!this.isDiscovering() || hasNewHosts) {
                     this.partecipating.execute((old) -> {
                         this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
                         return true;
                     });
                     return newTokenBuilder.setLeader(this.myId).build();
+                } else {
+                    LOG.fine("Discarding message because I'm already participating and the leader id is lower than mine");
+                    this.partecipating.execute((old) -> {
+                        this.temporaryKnownHostsCallback.accept(token.getPreviousKnownHostsMap());
+                        return true;
+                    });
+                    return null;
                 }
             } else {
-                LOG.fine("Discovery phase completed. Notifying results to the network");
+                DiscoveryToken discoveredToken = newTokenBuilder
+                    .setType(DiscoveryTokenType.DISCOVERED)
+                    .clearPreviousKnownHosts()
+                    .build();
+                LOG.fine("Discovery phase completed. Sending DISCOVERED token with nodes " + discoveredToken.getKnownHostsMap().keySet());
 
-                // Notify the new hosts in the same lock of partecipating flag
+                // Notify the new hosts in the same lock of participating flag
                 this.partecipating.execute((old) -> {
-                    this.newKnownHostsCallback.accept(token.getKnownHostsMap());
+                    this.newKnownHostsCallback.accept(discoveredToken.getKnownHostsMap());
                     return false;
                 });
                 this.endDiscoveryCallback.run();
-                return newTokenBuilder
-                    .setType(DiscoveryTokenType.DISCOVERED)
-                    .build();
+                return discoveredToken;
             }
         } else {
             if (token.getLeader() == this.myId) {
