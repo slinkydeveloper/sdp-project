@@ -4,6 +4,7 @@ import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 public class GatewayNodeServiceFileLogger implements GatewayNodeService {
@@ -15,9 +16,14 @@ public class GatewayNodeServiceFileLogger implements GatewayNodeService {
     }
 
     @Override
-    public void publishNewSensorReadings(int senderId, Map<Integer, Double> readings) {
+    public Map<Integer, String> join(int myId, String myAddress) {
+        return Collections.emptyMap();
+    }
+
+    @Override
+    public void publishNewAverage(int senderId, Map<Integer, Double> readings) {
         StringBuilder builder = new StringBuilder();
-        builder.append("--- publishNewSensorReadings by ")
+        builder.append("--- publishNewAverage by ")
             .append(senderId)
             .append(" at ")
             .append(System.currentTimeMillis())

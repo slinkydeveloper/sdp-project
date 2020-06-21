@@ -1,5 +1,6 @@
 package com.slinkydeveloper.sdp.gateway;
 
+import com.slinkydeveloper.sdp.jersey.JacksonObjectMapperProvider;
 import io.netty.channel.Channel;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.netty.httpserver.NettyHttpContainerProvider;

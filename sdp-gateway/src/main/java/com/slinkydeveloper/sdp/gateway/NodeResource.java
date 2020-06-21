@@ -18,14 +18,17 @@ import java.util.stream.Collectors;
 public class NodeResource {
 
     @POST
+    @Path("join")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Set<Node> join(Node newNode) {
+        //TODO check host not existing
         DataRepository.getHosts().put(newNode.getId(), newNode.getHost());
         return DataRepository.getNodesSet();
     }
 
     @POST
+    @Path("publishNewHosts")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response publishNewHosts(Set<Node> hosts) {
         DataRepository
@@ -39,6 +42,7 @@ public class NodeResource {
     }
 
     @POST
+    @Path("publishNewAverage")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response publishNewAverage(SensorDataAverage newAverage) {
         DataRepository

@@ -20,12 +20,14 @@ import java.util.Set;
 public class ClientResource {
 
     @GET
+    @Path("nodes")
     @Produces(MediaType.APPLICATION_JSON)
     public Set<Node> nodes() {
         return DataRepository.getNodesSet();
     }
 
     @GET
+    @Path("data")
     @Produces(MediaType.APPLICATION_JSON)
     public Response data(@QueryParam("n") Integer n) {
         List<Map.Entry<ZonedDateTime, SensorDataAverage>> values = (n == null || n == 0) ?

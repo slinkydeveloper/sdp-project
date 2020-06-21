@@ -11,5 +11,22 @@
 
     <artifactId>sdp-gateway-client</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.slinkydeveloper</groupId>
+            <artifactId>sdp-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.slinkydeveloper</groupId>
+            <artifactId>sdp-gateway-models</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

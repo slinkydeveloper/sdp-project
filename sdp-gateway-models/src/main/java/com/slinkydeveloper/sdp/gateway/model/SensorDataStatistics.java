@@ -1,5 +1,8 @@
 package com.slinkydeveloper.sdp.gateway.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +14,12 @@ public class SensorDataStatistics {
     private final double average;
     private final double standardDeviation;
 
-    public SensorDataStatistics(List<Map.Entry<ZonedDateTime, SensorDataAverage>> dataAverages, double average, double standardDeviation) {
+    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    public SensorDataStatistics(
+        @JsonProperty("dataAverages") List<Map.Entry<ZonedDateTime, SensorDataAverage>> dataAverages,
+        @JsonProperty("average") double average,
+        @JsonProperty("standardDeviation") double standardDeviation
+    ) {
         this.dataAverages = dataAverages;
         this.average = average;
         this.standardDeviation = standardDeviation;

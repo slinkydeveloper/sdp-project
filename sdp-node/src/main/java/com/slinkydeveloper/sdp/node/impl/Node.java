@@ -1,10 +1,14 @@
 package com.slinkydeveloper.sdp.node.impl;
 
+import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 import com.slinkydeveloper.sdp.gateway.client.impl.GatewayNodeServiceFileLogger;
+import com.slinkydeveloper.sdp.gateway.client.impl.GatewayNodeServiceImpl;
+import com.slinkydeveloper.sdp.jersey.JerseyUtils;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.simulator.PM10Simulator;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -15,15 +19,32 @@ public class Node {
         int myId = Integer.parseInt(args[0]);
         String myAddress = args[1];
 
-        Map<Integer, String> initialKnownHosts = new HashMap<>();
-        if (args.length == 3) {
-            for (String entry : args[2].split(Pattern.quote(","))) {
-                String[] splitted = entry.split(Pattern.quote("="));
-                initialKnownHosts.put(
-                    Integer.parseInt(splitted[0]),
-                    splitted[1]
-                );
-            }
+        GatewayNodeService gatewayNodeService;
+        Map<Integer, String> initialKnownHosts;
+
+        String mode = args[2];
+        switch (mode) {
+            case "-m":
+            case "--mock":
+                initialKnownHosts = new HashMap<>();
+                if (args.length == 4) {
+                    for (String entry : args[3].split(Pattern.quote(","))) {
+                        String[] splitted = entry.split(Pattern.quote("="));
+                        initialKnownHosts.put(
+                            Integer.parseInt(splitted[0]),
+                            splitted[1]
+                        );
+                    }
+                }
+                gatewayNodeService = new GatewayNodeServiceFileLogger("gateway.txt");
+                break;
+            case "-g":
+            case "--gateway":
+                gatewayNodeService = new GatewayNodeServiceImpl(JerseyUtils.createClient(), URI.create(args[3]));
+                initialKnownHosts = gatewayNodeService.join(myId, myAddress);
+                break;
+            default:
+                throw new IllegalArgumentException("Mode '" + mode + "' not recognized");
         }
 
         // Start the measurements simulator
@@ -37,7 +58,7 @@ public class Node {
             myAddress,
             initialKnownHosts,
             buffer,
-            new GatewayNodeServiceFileLogger("gateway.txt")
+            gatewayNodeService
         );
         serviceServer.start();
         serviceServer.blockUntilShutdown();

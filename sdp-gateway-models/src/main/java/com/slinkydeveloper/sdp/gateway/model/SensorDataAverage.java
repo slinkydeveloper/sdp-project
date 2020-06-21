@@ -1,5 +1,8 @@
 package com.slinkydeveloper.sdp.gateway.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 import java.util.Set;
 
@@ -8,7 +11,11 @@ public class SensorDataAverage {
     private final Set<Integer> participatingNodes;
     private final Double average;
 
-    public SensorDataAverage(Set<Integer> participatingNodes, Double average) {
+    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    public SensorDataAverage(
+        @JsonProperty("participatingNodes") Set<Integer> participatingNodes,
+        @JsonProperty("average") Double average
+    ) {
         this.participatingNodes = participatingNodes;
         this.average = average;
     }

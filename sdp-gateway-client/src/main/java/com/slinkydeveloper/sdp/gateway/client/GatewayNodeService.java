@@ -7,7 +7,9 @@ import java.util.Map;
  */
 public interface GatewayNodeService {
 
-    void publishNewSensorReadings(int senderId, Map<Integer, Double> readings);
+    Map<Integer, String> join(int myId, String myAddress);
+
+    void publishNewAverage(int senderId, Map<Integer, Double> readings);
 
     void publishNewHosts(int senderId, Map<Integer, String> hosts);
 }

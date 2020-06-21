@@ -1,4 +1,4 @@
-package com.slinkydeveloper.sdp.gateway;
+package com.slinkydeveloper.sdp.jersey;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;

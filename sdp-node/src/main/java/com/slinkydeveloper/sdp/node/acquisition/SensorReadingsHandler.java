@@ -37,7 +37,7 @@ public class SensorReadingsHandler {
         if (token.getLastMeasurementsMap().keySet().containsAll(knownHosts)) {
             LOG.info("We have data from everybody, I'm going to send values to the gateway");
 
-            gatewayService.publishNewSensorReadings(this.myId, token.getLastMeasurementsMap());
+            gatewayService.publishNewAverage(this.myId, token.getLastMeasurementsMap());
 
             return SensorReadingsToken.newBuilder().setGenerationUUID(token.getGenerationUUID()).build();
         }
