@@ -1,7 +1,7 @@
 package com.slinkydeveloper.sdp.gateway;
 
 import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorReadingsAverage;
+import com.slinkydeveloper.sdp.gateway.model.SensorDataAverage;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -40,9 +40,9 @@ public class NodeResource {
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response publishReadings(SensorReadingsAverage newAverage) {
+    public Response publishNewAverage(SensorDataAverage newAverage) {
         DataRepository
-            .getSensorReadings()
+            .getSensorData()
             .append(new SimpleImmutableEntry<>(ZonedDateTime.now(), newAverage));
         return Response.accepted().build();
     }

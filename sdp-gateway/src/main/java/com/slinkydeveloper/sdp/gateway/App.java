@@ -33,8 +33,9 @@ public class App {
 
     public static ResourceConfig createApp() {
         return new ResourceConfig()
+            .register(JacksonObjectMapperProvider.class)
             .register(NodeResource.class)
-            //.register(ClientResource.class)
+            .register(ClientResource.class)
             .register(JacksonFeature.class);
     }
 }

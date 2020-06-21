@@ -3,7 +3,7 @@ package com.slinkydeveloper.sdp.gateway;
 import com.slinkydeveloper.sdp.concurrent.AtomicList;
 import com.slinkydeveloper.sdp.concurrent.AtomicMap;
 import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorReadingsAverage;
+import com.slinkydeveloper.sdp.gateway.model.SensorDataAverage;
 
 import java.time.ZonedDateTime;
 import java.util.Map.Entry;
@@ -13,11 +13,11 @@ import java.util.stream.Collectors;
 public class DataRepository {
 
     private final AtomicMap<Integer, String> hosts;
-    private final AtomicList<Entry<ZonedDateTime, SensorReadingsAverage>> sensorReadings;
+    private final AtomicList<Entry<ZonedDateTime, SensorDataAverage>> sensorData;
 
     private DataRepository() {
         this.hosts = new AtomicMap<>("Hosts");
-        this.sensorReadings = new AtomicList<>("Sensor readings");
+        this.sensorData = new AtomicList<>("Sensor readings");
     }
 
     // Lazy initialization of singleton pattern
@@ -44,7 +44,7 @@ public class DataRepository {
             .collect(Collectors.toSet());
     }
 
-    public static AtomicList<Entry<ZonedDateTime, SensorReadingsAverage>> getSensorReadings() {
-        return getInstance().sensorReadings;
+    public static AtomicList<Entry<ZonedDateTime, SensorDataAverage>> getSensorData() {
+        return getInstance().sensorData;
     }
 }
