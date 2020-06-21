@@ -122,7 +122,7 @@ public class DiscoveryHandler {
             }
         } else {
             if (token.getLeader() == this.myId) {
-                LOG.fine("Discarding DISCOVERED token because I'm the LEADER and the discovery is finished");
+                LOG.fine("Received DISCOVERED token and I'm the LEADER and the discovery is finished");
 
                 this.gatewayService.publishNewHosts(this.myId, token.getKnownHostsMap());
 
