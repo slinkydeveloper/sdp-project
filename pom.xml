@@ -16,6 +16,8 @@
         <assertj-core.version>3.11.0</assertj-core.version>
         <junit-jupiter.version>5.5.2</junit-jupiter.version>
         <maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
+        <jersey.version>2.31</jersey.version>
+        <jackson.version>2.11.0</jackson.version>
     </properties>
 
     <dependencyManagement>
@@ -24,6 +26,20 @@
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-bom</artifactId>
                 <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -45,7 +61,9 @@
     <modules>
         <module>sdp-common</module>
         <module>sdp-node</module>
-        <module>sdp-gateway-interface</module>
+        <module>sdp-gateway-client</module>
+        <module>sdp-gateway</module>
+        <module>sdp-gateway-models</module>
     </modules>
 
     <build>

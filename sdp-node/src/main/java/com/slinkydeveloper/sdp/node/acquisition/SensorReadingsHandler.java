@@ -1,6 +1,6 @@
 package com.slinkydeveloper.sdp.node.acquisition;
 
-import com.slinkydeveloper.sdp.gateway.GatewayService;
+import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.SensorReadingsToken;
 
@@ -14,9 +14,9 @@ public class SensorReadingsHandler {
 
     private final int myId;
     private final OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer;
-    private final GatewayService gatewayService;
+    private final GatewayNodeService gatewayService;
 
-    public SensorReadingsHandler(int myId, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayService gatewayService) {
+    public SensorReadingsHandler(int myId, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayNodeService gatewayService) {
         this.myId = myId;
         this.slidingWindowBuffer = slidingWindowBuffer;
         this.gatewayService = gatewayService;

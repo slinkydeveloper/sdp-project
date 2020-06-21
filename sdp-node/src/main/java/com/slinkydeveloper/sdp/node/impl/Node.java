@@ -1,6 +1,6 @@
 package com.slinkydeveloper.sdp.node.impl;
 
-import com.slinkydeveloper.sdp.gateway.impl.GatewayServiceFileLogger;
+import com.slinkydeveloper.sdp.gateway.client.impl.GatewayNodeServiceFileLogger;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.simulator.PM10Simulator;
 
@@ -37,7 +37,7 @@ public class Node {
             myAddress,
             initialKnownHosts,
             buffer,
-            new GatewayServiceFileLogger("gateway.txt")
+            new GatewayNodeServiceFileLogger("gateway.txt")
         );
         serviceServer.start();
         serviceServer.blockUntilShutdown();

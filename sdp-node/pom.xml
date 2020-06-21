@@ -15,12 +15,12 @@
         <dependency>
             <groupId>com.slinkydeveloper</groupId>
             <artifactId>sdp-common</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.slinkydeveloper</groupId>
-            <artifactId>sdp-gateway-interface</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <artifactId>sdp-gateway-client</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- gRPC stuff -->

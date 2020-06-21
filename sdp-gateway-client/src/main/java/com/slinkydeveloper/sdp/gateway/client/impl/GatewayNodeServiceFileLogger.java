@@ -1,16 +1,16 @@
-package com.slinkydeveloper.sdp.gateway.impl;
+package com.slinkydeveloper.sdp.gateway.client.impl;
 
-import com.slinkydeveloper.sdp.gateway.GatewayService;
+import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
-public class GatewayServiceFileLogger implements GatewayService {
+public class GatewayNodeServiceFileLogger implements GatewayNodeService {
 
     private final String filename;
 
-    public GatewayServiceFileLogger(String filename) {
+    public GatewayNodeServiceFileLogger(String filename) {
         this.filename = filename;
     }
 

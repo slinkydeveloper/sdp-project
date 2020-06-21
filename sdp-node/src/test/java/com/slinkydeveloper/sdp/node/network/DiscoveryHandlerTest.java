@@ -1,6 +1,6 @@
 package com.slinkydeveloper.sdp.node.network;
 
-import com.slinkydeveloper.sdp.gateway.impl.GatewayServiceFileLogger;
+import com.slinkydeveloper.sdp.gateway.client.impl.GatewayNodeServiceFileLogger;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -15,7 +15,7 @@ class DiscoveryHandlerTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
     public void fourNodesDiscovery(int startingNode) {
-        GatewayServiceFileLogger service = new GatewayServiceFileLogger("sample.txt");
+        GatewayNodeServiceFileLogger service = new GatewayNodeServiceFileLogger("sample.txt");
 
         Consumer<Map<Integer, String>> assertCorrectDiscovery = m -> assertThat(m)
             .containsOnly(

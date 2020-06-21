@@ -2,7 +2,7 @@ package com.slinkydeveloper.sdp.node.impl;
 
 import com.google.protobuf.Empty;
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
-import com.slinkydeveloper.sdp.gateway.GatewayService;
+import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.NewNeighbour;
@@ -38,7 +38,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final TimerScheduler timerScheduler;
 
-    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayService service) {
+    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayNodeService service) {
         this.myId = myId;
         this.myAddress = myAddress;
 

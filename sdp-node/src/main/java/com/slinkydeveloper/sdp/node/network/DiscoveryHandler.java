@@ -1,7 +1,7 @@
 package com.slinkydeveloper.sdp.node.network;
 
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
-import com.slinkydeveloper.sdp.gateway.GatewayService;
+import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.DiscoveryTokenType;
@@ -22,7 +22,7 @@ public class DiscoveryHandler {
 
     private final int myId;
     private final String myAddress;
-    private final GatewayService gatewayService;
+    private final GatewayNodeService gatewayService;
     private final Consumer<Map<Integer, String>> temporaryKnownHostsCallback;
     private final Consumer<Map<Integer, String>> newKnownHostsCallback;
     private final Runnable endDiscoveryCallback;
@@ -31,7 +31,7 @@ public class DiscoveryHandler {
 
     private final AtomicPointer<DiscoveryStatus> status;
 
-    public DiscoveryHandler(int myId, String myAddress, GatewayService gatewayService, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated) {
+    public DiscoveryHandler(int myId, String myAddress, GatewayNodeService gatewayService, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated) {
         this.myId = myId;
         this.myAddress = myAddress;
         this.gatewayService = gatewayService;
