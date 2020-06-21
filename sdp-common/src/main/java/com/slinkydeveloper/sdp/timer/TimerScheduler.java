@@ -14,7 +14,7 @@ public class TimerScheduler {
         this.timers = new HashMap<>();
     }
 
-    public synchronized void schedule(Predicate<Set<String>> schedulePredicate, String id, long millis, Runnable runnable) {
+    public synchronized void conditionalSchedule(Predicate<Set<String>> schedulePredicate, String id, long millis, Runnable runnable) {
         if (schedulePredicate.test(this.timers.keySet())) {
             Timer timer = new Timer(id, true);
             timer.schedule(new TimerTask(id, runnable), millis);
@@ -23,7 +23,7 @@ public class TimerScheduler {
     }
 
     public synchronized void schedule(String id, long millis, Runnable runnable) {
-        this.schedule(v -> true, id, millis, runnable);
+        this.conditionalSchedule(v -> true, id, millis, runnable);
     }
 
     public synchronized void cancel(String id) {

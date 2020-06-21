@@ -251,6 +251,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     }
 
     private void startDiscoveryTimeoutTimer() {
+        stopSensorReadingsTimeoutTimer();
         long timeout = computeTimeout(1);
         this.timerScheduler.schedule(
             "discovery-timeout",
@@ -265,7 +266,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private void startSensorReadingsTimeoutTimer() {
         long timeout = computeTimeout(1);
-        this.timerScheduler.schedule(
+        this.timerScheduler.conditionalSchedule(
             s -> !s.contains("discovery-timeout"),
             "sensor-readings-timeout",
             timeout,
