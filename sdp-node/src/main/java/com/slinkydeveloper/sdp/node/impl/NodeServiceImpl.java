@@ -2,6 +2,7 @@ package com.slinkydeveloper.sdp.node.impl;
 
 import com.google.protobuf.Empty;
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
+import com.slinkydeveloper.sdp.gateway.GatewayService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.NewNeighbour;
@@ -37,17 +38,18 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
     private final TimerScheduler timerScheduler;
 
-    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer) {
+    public NodeServiceImpl(int myId, String myAddress, Map<Integer, String> initialKnownHosts, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayService service) {
         this.myId = myId;
         this.myAddress = myAddress;
 
         this.sensorReadingsTokenOnHold = new AtomicPointer<>("Token on hold");
         this.nodesRing = new NodesRing(myId, myAddress, initialKnownHosts);
 
-        this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer);
+        this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer, service);
         this.discoveryHandler = new DiscoveryHandler(
             this.myId,
             this.myAddress,
+            service,
             this.nodesRing::insertNodes,
             this.nodesRing::setNodes,
             this::checkAndDispatchTokenOnHold,
@@ -59,7 +61,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             }
         );
 
-        this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0l);
+        this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0L);
 
         this.timerScheduler = new TimerScheduler();
     }
@@ -104,17 +106,23 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             knownHosts
         );
 
+        boolean expectingOtherDiscoveryToken = token.getKey();
+        DiscoveryToken.Builder newTokenBuilder = token.getValue();
+
         // Reply to the client
         reply(responseObserver);
 
-        if (token.getValue() != null) {
-            DiscoveryToken.Builder builder = token.getValue();
+        if (newTokenBuilder != null) {
             if (!this.sensorReadingsTokenOnHold.isEmpty()) {
-                builder.setGenerateNewSensorReadingsToken(false);
+                newTokenBuilder.setGenerateNewSensorReadingsToken(false);
             }
-            dispatchDiscoveryToken(builder.build(), token.getKey());
-        } else if (token.getKey()) {
+            dispatchDiscoveryToken(newTokenBuilder.build(), expectingOtherDiscoveryToken);
+        } else if (expectingOtherDiscoveryToken) {
             startDiscoveryTimeoutTimer();
+        }
+
+        if (!expectingOtherDiscoveryToken) {
+            startSensorReadingsTimeoutTimer();
         }
     }
 
@@ -227,6 +235,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 return;
             } catch (Exception e) {
                 LOG.warning("Skipping " + (i + 1) + "° neighbour (id " + nextNeighbour.getKey() + ") because something wrong happened while passing the token: " + e);
+                e.printStackTrace();
 
                 token = this.discoveryHandler.fixTokenWhenHostIsUnavailable(token, nextNeighbour.getKey());
                 i++;

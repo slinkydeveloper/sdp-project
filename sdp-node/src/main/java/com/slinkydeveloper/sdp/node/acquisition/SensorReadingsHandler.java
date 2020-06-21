@@ -1,10 +1,9 @@
 package com.slinkydeveloper.sdp.node.acquisition;
 
+import com.slinkydeveloper.sdp.gateway.GatewayService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.SensorReadingsToken;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -15,10 +14,12 @@ public class SensorReadingsHandler {
 
     private final int myId;
     private final OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer;
+    private final GatewayService gatewayService;
 
-    public SensorReadingsHandler(int myId, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer) {
+    public SensorReadingsHandler(int myId, OverlappingSlidingWindowBuffer<Double> slidingWindowBuffer, GatewayService gatewayService) {
         this.myId = myId;
         this.slidingWindowBuffer = slidingWindowBuffer;
+        this.gatewayService = gatewayService;
     }
 
     public SensorReadingsToken handleSensorReadingsToken(final SensorReadingsToken request, final Set<Integer> knownHosts) {
@@ -36,17 +37,7 @@ public class SensorReadingsHandler {
         if (token.getLastMeasurementsMap().keySet().containsAll(knownHosts)) {
             LOG.info("We have data from everybody, I'm going to send values to the gateway");
 
-            // TODO send data to gateway
-            try {
-                FileOutputStream out = new FileOutputStream("tokens.txt", true);
-                out.write(("--- Written by " + this.myId + " at " + System.currentTimeMillis() + " ---\n").getBytes());
-                out.write((token.toString() + "\n").getBytes());
-                out.close();
-            } catch (IOException e) {
-                LOG.severe("Something broke badly while trying to write");
-                e.printStackTrace();
-                System.exit(1);
-            }
+            gatewayService.publishNewSensorReadings(this.myId, token.getLastMeasurementsMap());
 
             return SensorReadingsToken.newBuilder().setGenerationUUID(token.getGenerationUUID()).build();
         }

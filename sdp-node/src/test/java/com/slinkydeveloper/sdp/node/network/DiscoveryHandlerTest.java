@@ -1,5 +1,6 @@
 package com.slinkydeveloper.sdp.node.network;
 
+import com.slinkydeveloper.sdp.gateway.impl.GatewayServiceFileLogger;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -14,6 +15,8 @@ class DiscoveryHandlerTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
     public void fourNodesDiscovery(int startingNode) {
+        GatewayServiceFileLogger service = new GatewayServiceFileLogger("sample.txt");
+
         Consumer<Map<Integer, String>> assertCorrectDiscovery = m -> assertThat(m)
             .containsOnly(
                 new AbstractMap.SimpleImmutableEntry<>(1, "localhost:8080"),
@@ -23,19 +26,19 @@ class DiscoveryHandlerTest {
             );
 
         List<DiscoveryHandler> nodes = Arrays.asList(
-            new DiscoveryHandler(1, "localhost:8080", m -> {
+            new DiscoveryHandler(1, "localhost:8080", service, m -> {
             }, assertCorrectDiscovery, () -> {
             }, m -> {
             }),
-            new DiscoveryHandler(2, "localhost:8081", m -> {
+            new DiscoveryHandler(2, "localhost:8081", service, m -> {
             }, assertCorrectDiscovery, () -> {
             }, m -> {
             }),
-            new DiscoveryHandler(3, "localhost:8082", m -> {
+            new DiscoveryHandler(3, "localhost:8082", service, m -> {
             }, assertCorrectDiscovery, () -> {
             }, m -> {
             }),
-            new DiscoveryHandler(4, "localhost:8083", m -> {
+            new DiscoveryHandler(4, "localhost:8083", service, m -> {
             }, assertCorrectDiscovery, () -> {
             }, m -> {
             })

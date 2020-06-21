@@ -1,6 +1,7 @@
 package com.slinkydeveloper.sdp.node.network;
 
 import com.slinkydeveloper.sdp.concurrent.AtomicPointer;
+import com.slinkydeveloper.sdp.gateway.GatewayService;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 import com.slinkydeveloper.sdp.node.DiscoveryToken;
 import com.slinkydeveloper.sdp.node.DiscoveryTokenType;
@@ -21,16 +22,19 @@ public class DiscoveryHandler {
 
     private final int myId;
     private final String myAddress;
+    private final GatewayService gatewayService;
     private final Consumer<Map<Integer, String>> temporaryKnownHostsCallback;
     private final Consumer<Map<Integer, String>> newKnownHostsCallback;
     private final Runnable endDiscoveryCallback;
     private final Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated;
 
+
     private final AtomicPointer<DiscoveryStatus> status;
 
-    public DiscoveryHandler(int myId, String myAddress, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated) {
+    public DiscoveryHandler(int myId, String myAddress, GatewayService gatewayService, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated) {
         this.myId = myId;
         this.myAddress = myAddress;
+        this.gatewayService = gatewayService;
         this.temporaryKnownHostsCallback = temporaryKnownHostsCallback;
         this.newKnownHostsCallback = newKnownHostsCallback;
         this.endDiscoveryCallback = endDiscoveryCallback;
@@ -119,7 +123,9 @@ public class DiscoveryHandler {
         } else {
             if (token.getLeader() == this.myId) {
                 LOG.fine("Discarding DISCOVERED token because I'm the LEADER and the discovery is finished");
-                //TODO leader should notify to gateway the end of the discovery
+
+                this.gatewayService.publishNewHosts(this.myId, token.getKnownHostsMap());
+
                 this.leaderCallbackAfterDiscoveredPropagated.accept(token.getGenerateNewSensorReadingsToken());
                 return new SimpleImmutableEntry<>(false, null);
             } else {
