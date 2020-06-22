@@ -2,8 +2,8 @@ package com.slinkydeveloper.sdp.gateway;
 
 import com.slinkydeveloper.sdp.concurrent.AtomicList;
 import com.slinkydeveloper.sdp.concurrent.AtomicMap;
-import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorDataAverage;
+import com.slinkydeveloper.sdp.model.Node;
+import com.slinkydeveloper.sdp.model.SensorDataAverage;
 
 import java.time.ZonedDateTime;
 import java.util.Map.Entry;

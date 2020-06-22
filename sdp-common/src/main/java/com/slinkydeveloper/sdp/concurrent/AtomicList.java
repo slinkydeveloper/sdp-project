@@ -28,7 +28,7 @@ public class AtomicList<V> {
     }
 
     public synchronized List<V> getLast(int n) {
-        if (this.list.size() >= n) {
+        if (n >= this.list.size()) {
             return getCopy();
         }
         return this.list.stream().skip(this.list.size() - n).collect(Collectors.toList());

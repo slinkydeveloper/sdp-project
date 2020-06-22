@@ -1,21 +1,21 @@
 package com.slinkydeveloper.sdp.gateway.client.impl;
 
 import com.slinkydeveloper.sdp.gateway.client.GatewayClientService;
-import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorDataStatistics;
-import com.slinkydeveloper.sdp.log.LoggerConfig;
+import com.slinkydeveloper.sdp.model.Node;
+import com.slinkydeveloper.sdp.model.SensorDataStatistics;
 
 import javax.ws.rs.client.Client;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.logging.Logger;
 
 public class GatewayClientServiceImpl implements GatewayClientService {
 
-    private final static Logger LOG = LoggerConfig.getLogger(GatewayClientServiceImpl.class);
-
-    private final static Function<String, String> basePath = s -> "/node/" + s;
+    private final static Function<String, String> basePath = s -> "/client/" + s;
 
     private final Client client;
     private final URI host;
@@ -27,11 +27,29 @@ public class GatewayClientServiceImpl implements GatewayClientService {
 
     @Override
     public Set<Node> nodes() {
-        return null;
+        Response res = this.client
+            .target(host)
+            .path(basePath.apply("nodes"))
+            .request()
+            .accept(MediaType.APPLICATION_JSON)
+            .get();
+        return res.readEntity(new GenericType<Set<Node>>() {
+        });
     }
 
     @Override
-    public SensorDataStatistics data(Integer n) {
-        return null;
+    public SensorDataStatistics data(Integer limit) {
+        WebTarget target = this.client
+            .target(host)
+            .path(basePath.apply("data"));
+        if (limit != null) {
+            target = target.queryParam("limit", limit.toString());
+        }
+
+        Response res = target
+            .request()
+            .accept(MediaType.APPLICATION_JSON)
+            .get();
+        return res.readEntity(SensorDataStatistics.class);
     }
 }

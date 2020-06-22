@@ -2,8 +2,10 @@ package com.slinkydeveloper.sdp.concurrent;
 
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 public class AtomicMap<K, V> {
@@ -29,6 +31,14 @@ public class AtomicMap<K, V> {
     public synchronized V put(K key, V value) {
         LOG.fine(() -> "Putting key '" + key + "' with value '" + value + "' in map '" + name + "'");
         return this.map.put(key, value);
+    }
+
+    public synchronized boolean putIf(K key, V value, Predicate<Map<K, V>> predicate) {
+        if (predicate.test(Collections.unmodifiableMap(this.map))) {
+            put(key, value);
+            return true;
+        }
+        return false;
     }
 
     public synchronized V remove(K key) {

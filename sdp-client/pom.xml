@@ -9,22 +9,13 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>sdp-gateway</artifactId>
+    <artifactId>sdp-client</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.slinkydeveloper</groupId>
-            <artifactId>sdp-common</artifactId>
+            <artifactId>sdp-gateway-client</artifactId>
             <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.glassfish.jersey.containers</groupId>
-            <artifactId>jersey-container-netty-http</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jersey.inject</groupId>
-            <artifactId>jersey-hk2</artifactId>
         </dependency>
     </dependencies>
 
@@ -47,7 +38,7 @@
                                 <!-- add Main-Class to manifest file -->
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.slinkydeveloper.sdp.gateway.App</mainClass>
+                                    <mainClass>com.slinkydeveloper.sdp.client.Client</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

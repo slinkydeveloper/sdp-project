@@ -1,8 +1,9 @@
 package com.slinkydeveloper.sdp.gateway;
 
-import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorDataAverage;
-import com.slinkydeveloper.sdp.gateway.model.SensorDataStatistics;
+import com.slinkydeveloper.sdp.log.LoggerConfig;
+import com.slinkydeveloper.sdp.model.Node;
+import com.slinkydeveloper.sdp.model.SensorDataAverage;
+import com.slinkydeveloper.sdp.model.SensorDataStatistics;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -15,24 +16,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Logger;
 
 @Path("client")
 public class ClientResource {
+
+    private final static Logger LOG = LoggerConfig.getLogger(ClientResource.class);
 
     @GET
     @Path("nodes")
     @Produces(MediaType.APPLICATION_JSON)
     public Set<Node> nodes() {
+        LOG.info("GET nodes");
         return DataRepository.getNodesSet();
     }
 
     @GET
     @Path("data")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response data(@QueryParam("n") Integer n) {
-        List<Map.Entry<ZonedDateTime, SensorDataAverage>> values = (n == null || n == 0) ?
+    public Response data(@QueryParam("limit") Integer limit) {
+        LOG.info("GET data. limit: " + limit);
+        List<Map.Entry<ZonedDateTime, SensorDataAverage>> values = (limit == null || limit == 0) ?
             DataRepository.getSensorData().getCopy() :
-            DataRepository.getSensorData().getLast(n);
+            DataRepository.getSensorData().getLast(limit);
 
         return computeStatistics(values)
             .map(stats -> Response.ok(stats, MediaType.APPLICATION_JSON).build())

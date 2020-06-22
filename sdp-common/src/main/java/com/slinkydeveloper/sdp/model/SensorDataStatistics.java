@@ -1,4 +1,4 @@
-package com.slinkydeveloper.sdp.gateway.model;
+package com.slinkydeveloper.sdp.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

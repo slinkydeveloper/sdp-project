@@ -1,9 +1,9 @@
 package com.slinkydeveloper.sdp.gateway.client.impl;
 
 import com.slinkydeveloper.sdp.gateway.client.GatewayNodeService;
-import com.slinkydeveloper.sdp.gateway.model.Node;
-import com.slinkydeveloper.sdp.gateway.model.SensorDataAverage;
 import com.slinkydeveloper.sdp.log.LoggerConfig;
+import com.slinkydeveloper.sdp.model.Node;
+import com.slinkydeveloper.sdp.model.SensorDataAverage;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;

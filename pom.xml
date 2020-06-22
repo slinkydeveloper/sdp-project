@@ -63,7 +63,7 @@
         <module>sdp-node</module>
         <module>sdp-gateway-client</module>
         <module>sdp-gateway</module>
-        <module>sdp-gateway-models</module>
+        <module>sdp-client</module>
     </modules>
 
     <build>
