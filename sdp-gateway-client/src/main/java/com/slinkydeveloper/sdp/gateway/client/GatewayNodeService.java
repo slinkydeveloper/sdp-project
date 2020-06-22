@@ -3,7 +3,7 @@ package com.slinkydeveloper.sdp.gateway.client;
 import java.util.Map;
 
 /**
- * Interface describing the possible operations of the Gateway service
+ * Interface describing the possible operations of the Gateway Node service
  */
 public interface GatewayNodeService {
 

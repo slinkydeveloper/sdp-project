@@ -30,7 +30,7 @@ public class AtomicPointer<T> {
     }
 
     public synchronized void set(T value) {
-        LOG.fine("Setting value '" + name + "'");
+        LOG.fine("Setting pointer '" + name + "' to " + this.value);
         this.value = value;
     }
 
@@ -56,8 +56,7 @@ public class AtomicPointer<T> {
      */
     public synchronized T swap(Function<T, T> newValueGenerator) {
         T old = this.value;
-        this.value = newValueGenerator.apply(old);
-        LOG.fine("Setting pointer '" + name + "' to " + this.value);
+        set(newValueGenerator.apply(old));
         return old;
     }
 

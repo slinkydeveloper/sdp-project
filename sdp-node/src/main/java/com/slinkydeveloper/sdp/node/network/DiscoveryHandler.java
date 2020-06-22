@@ -26,19 +26,18 @@ public class DiscoveryHandler {
     private final Consumer<Map<Integer, String>> temporaryKnownHostsCallback;
     private final Consumer<Map<Integer, String>> newKnownHostsCallback;
     private final Runnable endDiscoveryCallback;
-    private final Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated;
-
+    private final Runnable generateSensorReadingsCallback;
 
     private final AtomicPointer<DiscoveryStatus> status;
 
-    public DiscoveryHandler(int myId, String myAddress, GatewayNodeService gatewayService, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Consumer<Boolean> leaderCallbackAfterDiscoveredPropagated) {
+    public DiscoveryHandler(int myId, String myAddress, GatewayNodeService gatewayService, Consumer<Map<Integer, String>> temporaryKnownHostsCallback, Consumer<Map<Integer, String>> newKnownHostsCallback, Runnable endDiscoveryCallback, Runnable generateSensorReadingsCallback) {
         this.myId = myId;
         this.myAddress = myAddress;
         this.gatewayService = gatewayService;
         this.temporaryKnownHostsCallback = temporaryKnownHostsCallback;
         this.newKnownHostsCallback = newKnownHostsCallback;
         this.endDiscoveryCallback = endDiscoveryCallback;
-        this.leaderCallbackAfterDiscoveredPropagated = leaderCallbackAfterDiscoveredPropagated;
+        this.generateSensorReadingsCallback = generateSensorReadingsCallback;
 
         this.status = new AtomicPointer<>("Participating to discovery", DiscoveryStatus.NOT_PARTICIPATING);
     }
@@ -117,16 +116,19 @@ public class DiscoveryHandler {
                     this.newKnownHostsCallback.accept(discoveredToken.getKnownHostsMap());
                     return NOT_PARTICIPATING;
                 });
-                this.endDiscoveryCallback.run();
                 return new SimpleImmutableEntry<>(false, discoveredToken);
             }
         } else {
             if (token.getLeader() == this.myId) {
-                LOG.fine("Received DISCOVERED token and I'm the LEADER and the discovery is finished");
+                LOG.fine("Discovered phase completed and I'm the LEADER");
 
                 this.gatewayService.publishNewHosts(this.myId, token.getKnownHostsMap());
 
-                this.leaderCallbackAfterDiscoveredPropagated.accept(token.getGenerateNewSensorReadingsToken());
+                if (token.getGenerateNewSensorReadingsToken()) {
+                    this.generateSensorReadingsCallback.run();
+                }
+
+                this.endDiscoveryCallback.run();
                 return new SimpleImmutableEntry<>(false, null);
             } else {
                 this.status.swap((old) -> {

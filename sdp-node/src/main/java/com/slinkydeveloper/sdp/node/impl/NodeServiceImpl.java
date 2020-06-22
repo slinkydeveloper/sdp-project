@@ -53,12 +53,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
             this.nodesRing::insertNodes,
             this.nodesRing::setNodes,
             this::checkAndDispatchTokenOnHold,
-            generateNewSensorReadingsToken -> {
-                if (generateNewSensorReadingsToken && this.sensorReadingsTokenOnHold.isEmpty()) {
-                    LOG.info("As a LEADER of the discovery, I'm going to regenerate the sensor readings token");
-                    dispatchSensorReadingsToken(SensorReadingsToken.newBuilder().setGenerationUUID(UUID.randomUUID().toString()).build());
-                }
-            }
+            this::checkAndGenerateNewSensorReadingsToken
         );
 
         this.waitMillis = Optional.ofNullable(System.getenv("SDP_WAIT")).map(Long::parseLong).orElse(0L);
@@ -199,6 +194,15 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
     }
 
+    private void checkAndGenerateNewSensorReadingsToken() {
+        if (this.sensorReadingsTokenOnHold.isEmpty()) {
+            LOG.info("As a LEADER of the discovery, I'm going to regenerate the sensor readings token");
+            dispatchSensorReadingsToken(SensorReadingsToken.newBuilder().setGenerationUUID(UUID.randomUUID().toString()).build());
+        } else {
+            LOG.info("No need to regenerate the token because I have it");
+        }
+    }
+
     private void dispatchSensorReadingsToken(SensorReadingsToken token) {
         // Forward to next neighbour
         Map.Entry<Integer, NodeGrpc.NodeBlockingStub> nextNeighbour = nodesRing.getNext(0);
@@ -208,7 +212,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 nextNeighbour.getValue().passSensorReadingsToken(token);
                 LOG.info("Sensors reading token passed successfully to next neighbour " + nextNeighbour.getKey());
                 this.startSensorReadingsTimeoutTimer();
-                this.sensorReadingsTokenOnHold.clear();
             } catch (Exception e) {
                 LOG.warning("Failure while trying to pass the sensors readings token to neighbour " + nextNeighbour.getKey() + ": " + e);
                 e.printStackTrace();
@@ -216,7 +219,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
                 startDiscoveryAfterFailure(Collections.singleton(nextNeighbour.getKey()), false);
             }
         } else {
-            throw new IllegalStateException("All the neighbours are unavailable!");
+            throw new IllegalStateException("No neighbours found!");
         }
     }
 

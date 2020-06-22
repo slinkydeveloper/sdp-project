@@ -28,19 +28,19 @@ class DiscoveryHandlerTest {
         List<DiscoveryHandler> nodes = Arrays.asList(
             new DiscoveryHandler(1, "localhost:8080", service, m -> {
             }, assertCorrectDiscovery, () -> {
-            }, m -> {
+            }, () -> {
             }),
             new DiscoveryHandler(2, "localhost:8081", service, m -> {
             }, assertCorrectDiscovery, () -> {
-            }, m -> {
+            }, () -> {
             }),
             new DiscoveryHandler(3, "localhost:8082", service, m -> {
             }, assertCorrectDiscovery, () -> {
-            }, m -> {
+            }, () -> {
             }),
             new DiscoveryHandler(4, "localhost:8083", service, m -> {
             }, assertCorrectDiscovery, () -> {
-            }, m -> {
+            }, () -> {
             })
         );
 
