@@ -66,19 +66,18 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         stopSensorReadingsTimeoutTimer();
         LOG.info("Received sensor readings token:\n" + request);
 
+        // Reply to the client
+        reply(responseObserver);
+
         // If we're discovering nodes, then keep the token on hold
         if (this.discoveryHandler.executeIfIsDiscovering(() -> this.sensorReadingsTokenOnHold.set(request))) {
             LOG.info("We're discovering, the token is on hold");
-            reply(responseObserver);
             return;
         }
 
         // Generate the new token to forward
         SensorReadingsToken newToken = sensorReadingsHandler
             .handleSensorReadingsToken(request, this.nodesRing.getKnownHosts().keySet());
-
-        // Reply to the client
-        reply(responseObserver);
 
         if (newToken != null) {
             dispatchSensorReadingsToken(newToken);
@@ -89,6 +88,9 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     public void passDiscoveryToken(DiscoveryToken request, StreamObserver<Empty> responseObserver) {
         stopDiscoveryTimeoutTimer();
         LOG.info("Received discovery token:\n" + request);
+
+        // Reply to the client
+        reply(responseObserver);
 
         // Generate the new token to forward
         Map<Integer, String> knownHosts = this.nodesRing.getKnownHosts();
@@ -103,9 +105,6 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
 
         boolean expectingOtherDiscoveryToken = token.getKey();
         DiscoveryToken.Builder newTokenBuilder = token.getValue();
-
-        // Reply to the client
-        reply(responseObserver);
 
         if (newTokenBuilder != null) {
             if (!this.sensorReadingsTokenOnHold.isEmpty()) {
@@ -125,15 +124,15 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
     public void notifyNewNeighbour(NewNeighbour request, StreamObserver<Empty> responseObserver) {
         LOG.info("I have a new neighbour:\n" + request);
 
+        // Reply to the client
+        reply(responseObserver);
+
         // Temporary insert a new neighbour
         this.nodesRing.insertNode(request.getId(), request.getAddress());
 
         // Generate the discovery start token
         DiscoveryToken token = discoveryHandler
             .startDiscovery(this.nodesRing.getKnownHosts(), false);
-
-        // Reply to the client
-        reply(responseObserver);
 
         dispatchDiscoveryToken(token, true);
     }
@@ -166,6 +165,10 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         }
         LOG.info("I'm alone in the network");
         this.sensorReadingsTokenOnHold.set(SensorReadingsToken.newBuilder().setGenerationUUID(UUID.randomUUID().toString()).build());
+    }
+
+    public void stop() {
+        checkAndDispatchTokenOnHold();
     }
 
     /**

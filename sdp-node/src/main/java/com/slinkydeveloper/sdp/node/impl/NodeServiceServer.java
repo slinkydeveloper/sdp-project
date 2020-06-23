@@ -33,10 +33,16 @@ public class NodeServiceServer {
     /**
      * Start serving requests.
      */
-    public void start() throws IOException {
+    public void start() throws IOException, InterruptedException {
         server.start();
         LOG.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                service.stop();
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
+            }
+
             // Use stderr here since the logger may have been reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");
             try {
@@ -46,6 +52,9 @@ public class NodeServiceServer {
             }
             System.err.println("*** server shut down");
         }));
+
+        // Because start is deferred, wait just a bit for the server to start
+        Thread.sleep(500);
 
         // When we join, we greet the previous node
         this.service.start();
