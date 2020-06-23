@@ -9,6 +9,7 @@ import com.slinkydeveloper.sdp.model.SensorDataStatistics;
 import java.net.URI;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Client {
 
@@ -29,7 +30,8 @@ public class Client {
 
         console.listChoices(
             new SimpleImmutableEntry<>("Get connected nodes to the network", queryNodes(console, clientService)),
-            new SimpleImmutableEntry<>("Get data statistics", queryStats(console, clientService))
+            new SimpleImmutableEntry<>("Get data statistics", queryStats(console, clientService)),
+            new SimpleImmutableEntry<>("Listen to new events", listenEvents(console, clientService))
         );
     }
 
@@ -65,6 +67,29 @@ public class Client {
             console.newLine();
             console.print("Average: " + stats.getAverage());
             console.print("Standard deviation: " + stats.getStandardDeviation());
+        };
+    }
+
+    public static Runnable listenEvents(Console console, GatewayClientService clientService) {
+        return () -> {
+            console.print("Press any button to stop listening");
+            Runnable close = clientService.registerEventHandler(
+                networkTopologyChangeEvent ->
+                    console.print(
+                        "Topology change\n  New topology " + networkTopologyChangeEvent.getNewNodes() +
+                            "\n  Old topology " + networkTopologyChangeEvent.getOldNodes() +
+                            "\n  Added nodes " + networkTopologyChangeEvent.getAddedNodes().stream().map(Node::getId).collect(Collectors.toSet()) +
+                            "\n  Removed nodes " + networkTopologyChangeEvent.getRemovedNodes().stream().map(Node::getId).collect(Collectors.toSet())
+                    ),
+                newAverage ->
+                    console.print(
+                        "New sensor reading\n  Value: '" + newAverage.getAverage() +
+                            "'\n  Participating nodes: " + newAverage.getParticipatingNodes()
+                    )
+            );
+
+            System.console().readLine();
+            close.run();
         };
     }
 

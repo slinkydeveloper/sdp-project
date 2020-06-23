@@ -1,6 +1,7 @@
 package com.slinkydeveloper.sdp.gateway;
 
 import com.slinkydeveloper.sdp.log.LoggerConfig;
+import com.slinkydeveloper.sdp.model.NetworkTopologyChangeEvent;
 import com.slinkydeveloper.sdp.model.Node;
 import com.slinkydeveloper.sdp.model.SensorDataAverage;
 
@@ -8,6 +9,8 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.container.ResourceContext;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.time.ZonedDateTime;
@@ -42,27 +45,38 @@ public class NodeResource {
     @POST
     @Path("publishNewHosts")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response publishNewHosts(Set<Node> hosts) {
+    public Response publishNewHosts(@Context ResourceContext context, Set<Node> hosts) {
         LOG.info("POST publishNewHosts. new hosts: " + hosts);
 
-        DataRepository
+        Set<Node> old = DataRepository
             .getHosts()
             .replaceAll(
                 hosts
                     .stream()
                     .collect(Collectors.toMap(Node::getId, Node::getHost))
-            );
+            )
+            .entrySet()
+            .stream()
+            .map(e -> new Node(e.getKey(), e.getValue()))
+            .collect(Collectors.toSet());
+
+        context
+            .getResource(EventsResource.class)
+            .sendMessage(new NetworkTopologyChangeEvent(hosts, old));
         return Response.accepted().build();
     }
 
     @POST
     @Path("publishNewAverage")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response publishNewAverage(SensorDataAverage newAverage) {
+    public Response publishNewAverage(@Context ResourceContext context, SensorDataAverage newAverage) {
         LOG.info("POST publishNewAverage. new average: " + newAverage);
         DataRepository
             .getSensorData()
             .append(new SimpleImmutableEntry<>(ZonedDateTime.now(), newAverage));
+        context
+            .getResource(EventsResource.class)
+            .sendMessage(newAverage);
         return Response.accepted().build();
     }
 
