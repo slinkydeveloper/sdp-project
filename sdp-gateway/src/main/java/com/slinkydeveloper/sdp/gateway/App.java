@@ -3,6 +3,7 @@ package com.slinkydeveloper.sdp.gateway;
 import com.slinkydeveloper.sdp.jersey.JacksonObjectMapperProvider;
 import io.netty.channel.Channel;
 import org.glassfish.jersey.jackson.JacksonFeature;
+import org.glassfish.jersey.media.sse.SseFeature;
 import org.glassfish.jersey.netty.httpserver.NettyHttpContainerProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 
@@ -34,7 +35,9 @@ public class App {
 
     public static ResourceConfig createApp() {
         return new ResourceConfig()
+            .register(SseFeature.class)
             .register(JacksonObjectMapperProvider.class)
+            .register(EventsResource.class)
             .register(NodeResource.class)
             .register(ClientResource.class)
             .register(JacksonFeature.class);
