@@ -153,6 +153,10 @@ public class DiscoveryHandler {
         return builder.build();
     }
 
+    public DiscoveryStatus getStatus() {
+        return this.status.get();
+    }
+
     public boolean isDiscovering() {
         return this.status.get().isParticipating();
     }

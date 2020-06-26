@@ -11,6 +11,7 @@ import com.slinkydeveloper.sdp.node.SensorReadingsToken;
 import com.slinkydeveloper.sdp.node.acquisition.OverlappingSlidingWindowBuffer;
 import com.slinkydeveloper.sdp.node.acquisition.SensorReadingsHandler;
 import com.slinkydeveloper.sdp.node.network.DiscoveryHandler;
+import com.slinkydeveloper.sdp.node.network.DiscoveryStatus;
 import com.slinkydeveloper.sdp.node.network.NodesRing;
 import com.slinkydeveloper.sdp.timer.TimerScheduler;
 import io.grpc.stub.StreamObserver;
@@ -271,7 +272,11 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.timerScheduler.schedule(
             "discovery-timeout",
             timeout,
-            () -> this.startDiscoveryAfterFailure(Collections.emptySet(), false)
+            () ->
+                this.startDiscoveryAfterFailure(
+                    Collections.emptySet(),
+                    this.discoveryHandler.getStatus() == DiscoveryStatus.GENERATE_TOKEN_PARTICIPATION
+                )
         );
     }
 
