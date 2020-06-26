@@ -2,7 +2,6 @@ package com.slinkydeveloper.sdp.concurrent;
 
 import com.slinkydeveloper.sdp.log.LoggerConfig;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -20,13 +19,6 @@ public class AtomicPointer<T> {
 
     public AtomicPointer(String name) {
         this(name, null);
-    }
-
-    public synchronized void clear() {
-        if (value != null) {
-            LOG.fine("Cleared value '" + name + "'");
-            this.value = null;
-        }
     }
 
     public synchronized void set(T value) {
@@ -68,15 +60,5 @@ public class AtomicPointer<T> {
      */
     public synchronized <U> U map(Function<T, U> fn) {
         return fn.apply(this.value);
-    }
-
-    /**
-     * Consume the internal value in the pointer lock
-     *
-     * @param fn
-     * @return
-     */
-    public synchronized void consume(Consumer<T> fn) {
-        fn.accept(this.value);
     }
 }

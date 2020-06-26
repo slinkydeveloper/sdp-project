@@ -157,10 +157,6 @@ public class DiscoveryHandler {
         return this.status.get();
     }
 
-    public boolean isDiscovering() {
-        return this.status.get().isParticipating();
-    }
-
     public boolean executeIfIsDiscovering(Runnable runnable) {
         return this.status.map(s -> {
             if (s.isParticipating()) {

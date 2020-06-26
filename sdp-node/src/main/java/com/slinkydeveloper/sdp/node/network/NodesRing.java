@@ -11,15 +11,13 @@ public class NodesRing {
     private final static Logger LOG = LoggerConfig.getLogger(NodesRing.class);
 
     private final int myId;
-    private final String myAddress;
 
     private Map<Integer, String> knownHosts;
     private Map<Integer, NodeGrpc.NodeBlockingStub> openClients;
     private List<Integer> nextNeighbours;
 
-    public NodesRing(int myId, String myAddress, Map<Integer, String> initialKnownHosts) {
+    public NodesRing(int myId, Map<Integer, String> initialKnownHosts) {
         this.myId = myId;
-        this.myAddress = myAddress;
         this.setNodes(initialKnownHosts);
     }
 

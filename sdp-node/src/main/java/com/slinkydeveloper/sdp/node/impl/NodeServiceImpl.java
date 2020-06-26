@@ -44,7 +44,7 @@ public class NodeServiceImpl extends NodeGrpc.NodeImplBase {
         this.myAddress = myAddress;
 
         this.sensorReadingsTokenOnHold = new AtomicPointer<>("Token on hold");
-        this.nodesRing = new NodesRing(myId, myAddress, initialKnownHosts);
+        this.nodesRing = new NodesRing(myId, initialKnownHosts);
 
         this.sensorReadingsHandler = new SensorReadingsHandler(this.myId, slidingWindowBuffer, service);
         this.discoveryHandler = new DiscoveryHandler(

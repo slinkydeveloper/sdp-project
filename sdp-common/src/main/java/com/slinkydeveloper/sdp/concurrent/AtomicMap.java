@@ -41,11 +41,6 @@ public class AtomicMap<K, V> {
         return false;
     }
 
-    public synchronized V remove(K key) {
-        LOG.fine("Removing key '" + key + "' from map '" + name + "'");
-        return this.map.remove(key);
-    }
-
     public synchronized Map<K, V> replaceAll(Map<K, V> newMap) {
         LOG.fine(() -> "Replacing map '" + name + "' with new values: " + newMap);
         Map<K, V> old = getCopy();
